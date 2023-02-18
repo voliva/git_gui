@@ -1,6 +1,6 @@
-use git2::{Error, Oid, Repository};
+use git2::{Commit, Error, Oid, Repository};
 use itertools::Itertools;
-use std::time::Instant;
+use std::{collections::HashSet, time::Instant};
 
 fn main() {
     let repo = match Repository::open("E:\\development\\rxjs") {
@@ -28,8 +28,11 @@ fn main() {
 
     println!("Read commits + sort: {}", get_elapsed(start));
 
-    let positioned_commits = position_commits(&commits);
+    let positioned_commits = position_commits(commits);
 
+    positioned_commits.iter().take(20).for_each(|positioned| {
+        println!("{} {}", positioned.position, positioned.commit.id());
+    })
     // let branches = repo.branches(None).unwrap();
     // branches.for_each(|b| {
     //     let (branch, branchType) = b.unwrap();
@@ -38,13 +41,167 @@ fn main() {
     // println!("done");
 }
 
-struct PositionedCommit {
-    commit: Commit,
-    position: usize,
+#[derive(Clone)]
+enum BranchPath {
+    Base(usize),   // top -> commit
+    Parent(usize), // commit -> bottom
+    Follow(usize), // top -> bottom
+                   // Line(usize, usize), // top -> bottom
 }
 
-fn position_commits(commits: Vec<Commit>) -> _ {
-    todo!()
+struct PositionedCommit<'a> {
+    commit: Commit<'a>,
+    position: usize,
+    paths: Vec<(BranchPath, usize)>, // (path, color)
+}
+
+fn position_commits<'a>(commits: Vec<Commit<'a>>) -> Vec<PositionedCommit<'a>> {
+    let mut result = vec![];
+    let mut branches: Vec<Option<(Oid, usize)>> = vec![];
+
+    for commit in commits {
+        // Step 1. set position and color of the commit + top paths (BranchPath::Base)
+        let matching_branches = branches
+            .iter()
+            .map(|x| x.to_owned())
+            .enumerate()
+            .filter_map(|(i, content)| {
+                if let Some((id, color)) = content {
+                    if commit.id().eq(&id) {
+                        Some((i, (id, color)))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect_vec();
+
+        let (position, color, top_paths) = if matching_branches.len() == 0 {
+            // It's a new branch
+            let position = branches
+                .iter()
+                .find_position(|v| v.is_none())
+                .map(|(pos, _)| pos)
+                .unwrap_or(branches.len());
+            let color = get_avilable_color(&branches);
+            (position, color, vec![])
+        } else {
+            // This commit is a base of all `matching_branches`
+            // It will take the position and color of the first one (left-most)
+            let (position, (_, color)) = matching_branches[0];
+            let top_paths = matching_branches
+                .iter()
+                .map(|(position, (_, color))| (BranchPath::Base(*position), *color))
+                .collect_vec();
+            (position, color, top_paths)
+        };
+
+        // Step 2. Follow through untouched branches
+        let follow_paths = branches
+            .iter()
+            .map(|x| x.to_owned())
+            .enumerate()
+            .filter_map(|(i, content)| {
+                if let Some((id, color)) = content {
+                    if commit.id().eq(&id) {
+                        None
+                    } else {
+                        Some((BranchPath::Follow(i), color))
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect_vec();
+
+        branches = branches
+            .iter()
+            .map(|content| {
+                if let Some((id, color)) = *content {
+                    if commit.id().eq(&id) {
+                        None
+                    } else {
+                        Some((id, color))
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // Step 3. Wire everything up
+        let mut paths = top_paths
+            .iter()
+            .chain(follow_paths.iter())
+            .map(|x| x.clone())
+            .collect_vec();
+
+        // Step 4. Add this commit's legacy
+        let parents = commit.parent_ids().collect_vec();
+        if parents.len() > 0 {
+            if position == branches.len() {
+                branches.push(Some((parents[0], color)))
+            } else {
+                branches[position] = Some((parents[0], color));
+            }
+            paths.push((BranchPath::Parent(position), color));
+
+            if parents.len() > 1 {
+                // We can try and split it from an existing path if it's already there
+                let existing = branches
+                    .iter()
+                    .find_position(|content| {
+                        content
+                            .and_then(|(id, _)| Some(parents[1].eq(&id)))
+                            .unwrap_or(false)
+                    })
+                    .map(|(position, content)| {
+                        let (_, color) = content.unwrap();
+                        (position, color)
+                    });
+                let (position, color) = existing
+                    .or_else(|| {
+                        let position = branches
+                            .iter()
+                            .find_position(|v| v.is_none())
+                            .map(|(pos, _)| pos)
+                            .unwrap_or(branches.len());
+                        Some((position, get_avilable_color(&branches)))
+                    })
+                    .unwrap();
+
+                if position == branches.len() {
+                    branches.push(Some((parents[1], color)))
+                } else {
+                    branches[position] = Some((parents[1], color));
+                }
+                paths.push((BranchPath::Parent(position), color));
+            }
+        }
+
+        result.push(PositionedCommit {
+            commit,
+            position,
+            paths,
+        });
+    }
+
+    return result;
+}
+
+fn get_avilable_color(branches: &Vec<Option<(Oid, usize)>>) -> usize {
+    let mut set: HashSet<usize> = HashSet::from_iter(0..(branches.len() + 1));
+
+    branches
+        .iter()
+        .filter_map(|opt| opt.map(|x| x))
+        .for_each(|(_, c)| {
+            set.remove(&c);
+        });
+
+    return set.iter().next().unwrap().to_owned();
 }
 
 fn get_commit_oids(repo: &Repository) -> Result<Vec<Oid>, Error> {
