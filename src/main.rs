@@ -1,236 +1,101 @@
-use git2::{Commit, Error, Oid, Repository};
-use itertools::Itertools;
-use std::{collections::HashSet, time::Instant};
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
+
+use egui_winit::winit;
+use window::create_display;
+mod window;
 
 fn main() {
-    let repo = match Repository::open("E:\\development\\rxjs") {
-        Ok(repo) => repo,
-        Err(e) => panic!("failed to open: {}", e),
-    };
+    let mut clear_color = [0.1, 0.1, 0.1];
 
-    // repo.references_glob("*")
-    //     .unwrap()
-    //     .for_each(|r| println!("Ref {:?}", r.unwrap().name()));
+    let event_loop = winit::event_loop::EventLoopBuilder::with_user_event().build();
+    let (gl_window, gl) = create_display(&event_loop);
+    let gl = std::sync::Arc::new(gl);
 
-    let start = Instant::now();
+    let mut egui_glow = egui_glow::EguiGlow::new(&event_loop, gl.clone(), None);
 
-    let commit_oids = get_commit_oids(&repo).unwrap();
-    println!("Read repo oids: {}", get_elapsed(start));
-    let start = Instant::now();
+    event_loop.run(move |event, _, control_flow| {
+        let mut redraw = || {
+            let mut quit = false;
 
-    // TODO is it necessary to sort them?
-    let commits = commit_oids
-        .iter()
-        .filter_map(|oid| repo.find_commit(*oid).ok())
-        .sorted_by(|a, b| b.time().cmp(&a.time()))
-        .collect_vec();
-
-    println!("Read commits + sort: {}", get_elapsed(start));
-    let start = Instant::now();
-
-    let positioned_commits = position_commits(commits);
-
-    println!("position commits: {}", get_elapsed(start));
-    let start = Instant::now();
-
-    // positioned_commits.iter().take(20).for_each(|positioned| {
-    //     println!("{} {}", positioned.position, positioned.commit.id());
-    // })
-    // let branches = repo.branches(None).unwrap();
-    // branches.for_each(|b| {
-    //     let (branch, branchType) = b.unwrap();
-    //     println!("{} {:?}", branch.name().unwrap().unwrap(), branchType);
-    // });
-    // println!("done");
-}
-
-#[derive(Clone)]
-enum BranchPath {
-    Base(usize),   // top -> commit
-    Parent(usize), // commit -> bottom
-    Follow(usize), // top -> bottom
-                   // Line(usize, usize), // top -> bottom
-}
-
-struct PositionedCommit<'a> {
-    commit: Commit<'a>,
-    position: usize,
-    paths: Vec<(BranchPath, usize)>, // (path, color)
-}
-
-fn position_commits<'a>(commits: Vec<Commit<'a>>) -> Vec<PositionedCommit<'a>> {
-    let mut result = vec![];
-    let mut branches: Vec<Option<(Oid, usize)>> = vec![];
-
-    for commit in commits {
-        // Step 1. set position and color of the commit + top paths (BranchPath::Base)
-        let matching_branches = branches
-            .iter()
-            .map(|x| x.to_owned())
-            .enumerate()
-            .filter_map(|(i, content)| {
-                if let Some((id, color)) = content {
-                    if commit.id().eq(&id) {
-                        Some((i, (id, color)))
-                    } else {
-                        None
+            let repaint_after = egui_glow.run(gl_window.window(), |egui_ctx| {
+                egui::SidePanel::left("my_side_panel").show(egui_ctx, |ui| {
+                    ui.heading("Hello World!");
+                    if ui.button("Quit").clicked() {
+                        quit = true;
                     }
-                } else {
-                    None
-                }
-            })
-            .collect_vec();
+                    ui.color_edit_button_rgb(&mut clear_color);
+                });
+            });
 
-        let (position, color, top_paths) = if matching_branches.len() == 0 {
-            // It's a new branch
-            let position = branches
-                .iter()
-                .find_position(|v| v.is_none())
-                .map(|(pos, _)| pos)
-                .unwrap_or(branches.len());
-            let color = get_avilable_color(&branches);
-            (position, color, vec![])
-        } else {
-            // This commit is a base of all `matching_branches`
-            // It will take the position and color of the first one (left-most)
-            let (position, (_, color)) = matching_branches[0];
-            let top_paths = matching_branches
-                .iter()
-                .map(|(position, (_, color))| (BranchPath::Base(*position), *color))
-                .collect_vec();
-            (position, color, top_paths)
+            *control_flow = if quit {
+                winit::event_loop::ControlFlow::Exit
+            } else if repaint_after.is_zero() {
+                gl_window.window().request_redraw();
+                winit::event_loop::ControlFlow::Poll
+            } else if let Some(repaint_after_instant) =
+                std::time::Instant::now().checked_add(repaint_after)
+            {
+                winit::event_loop::ControlFlow::WaitUntil(repaint_after_instant)
+            } else {
+                winit::event_loop::ControlFlow::Wait
+            };
+
+            {
+                // unsafe {
+                //     use glow::HasContext as _;
+                //     gl.clear_color(clear_color[0], clear_color[1], clear_color[2], 1.0);
+                //     gl.clear(glow::COLOR_BUFFER_BIT);
+                // }
+
+                // draw things behind egui here
+
+                egui_glow.paint(gl_window.window());
+
+                // draw things on top of egui here
+
+                gl_window.swap_buffers().unwrap();
+                gl_window.window().set_visible(true);
+            }
         };
 
-        // Step 2. Follow through untouched branches
-        let follow_paths = branches
-            .iter()
-            .map(|x| x.to_owned())
-            .enumerate()
-            .filter_map(|(i, content)| {
-                if let Some((id, color)) = content {
-                    if commit.id().eq(&id) {
-                        None
-                    } else {
-                        Some((BranchPath::Follow(i), color))
-                    }
-                } else {
-                    None
+        match event {
+            // Platform-dependent event handlers to workaround a winit bug
+            // See: https://github.com/rust-windowing/winit/issues/987
+            // See: https://github.com/rust-windowing/winit/issues/1619
+            winit::event::Event::RedrawEventsCleared if cfg!(windows) => redraw(),
+            winit::event::Event::RedrawRequested(_) if !cfg!(windows) => redraw(),
+
+            winit::event::Event::WindowEvent { event, .. } => {
+                use winit::event::WindowEvent;
+                if matches!(event, WindowEvent::CloseRequested | WindowEvent::Destroyed) {
+                    *control_flow = winit::event_loop::ControlFlow::Exit;
                 }
-            })
-            .collect_vec();
 
-        branches = branches
-            .iter()
-            .map(|content| {
-                if let Some((id, color)) = *content {
-                    if commit.id().eq(&id) {
-                        None
-                    } else {
-                        Some((id, color))
-                    }
-                } else {
-                    None
+                if let winit::event::WindowEvent::Resized(physical_size) = &event {
+                    gl_window.resize(*physical_size);
+                } else if let winit::event::WindowEvent::ScaleFactorChanged {
+                    new_inner_size, ..
+                } = &event
+                {
+                    gl_window.resize(**new_inner_size);
                 }
-            })
-            .collect();
 
-        // Step 3. Wire everything up
-        let mut paths = top_paths
-            .iter()
-            .chain(follow_paths.iter())
-            .map(|x| x.clone())
-            .collect_vec();
+                let event_response = egui_glow.on_event(&event);
 
-        // Step 4. Add this commit's legacy
-        let parents = commit.parent_ids().collect_vec();
-        if parents.len() > 0 {
-            if position == branches.len() {
-                branches.push(Some((parents[0], color)))
-            } else {
-                branches[position] = Some((parents[0], color));
+                if event_response.repaint {
+                    gl_window.window().request_redraw();
+                }
             }
-            paths.push((BranchPath::Parent(position), color));
-
-            if parents.len() > 1 {
-                // We can try and split it from an existing path if it's already there
-                let existing = branches
-                    .iter()
-                    .find_position(|content| {
-                        content
-                            .and_then(|(id, _)| Some(parents[1].eq(&id)))
-                            .unwrap_or(false)
-                    })
-                    .map(|(position, content)| {
-                        let (_, color) = content.unwrap();
-                        (position, color)
-                    });
-                let (position, color) = existing
-                    .or_else(|| {
-                        let position = branches
-                            .iter()
-                            .find_position(|v| v.is_none())
-                            .map(|(pos, _)| pos)
-                            .unwrap_or(branches.len());
-                        Some((position, get_avilable_color(&branches)))
-                    })
-                    .unwrap();
-
-                if position == branches.len() {
-                    branches.push(Some((parents[1], color)))
-                } else {
-                    branches[position] = Some((parents[1], color));
-                }
-                paths.push((BranchPath::Parent(position), color));
+            winit::event::Event::LoopDestroyed => {
+                egui_glow.destroy();
             }
-        }
+            winit::event::Event::NewEvents(winit::event::StartCause::ResumeTimeReached {
+                ..
+            }) => {
+                gl_window.window().request_redraw();
+            }
 
-        result.push(PositionedCommit {
-            commit,
-            position,
-            paths,
-        });
-    }
-
-    return result;
-}
-
-fn get_avilable_color(branches: &Vec<Option<(Oid, usize)>>) -> usize {
-    let mut set: HashSet<usize> = HashSet::from_iter(0..(branches.len() + 1));
-
-    branches
-        .iter()
-        .filter_map(|opt| opt.map(|x| x))
-        .for_each(|(_, c)| {
-            set.remove(&c);
-        });
-
-    return set.iter().next().unwrap().to_owned();
-}
-
-fn get_commit_oids(repo: &Repository) -> Result<Vec<Oid>, Error> {
-    let mut result = vec![];
-
-    let mut walker = repo.revwalk()?;
-    // Use "refs/heads" if you only want to get commits held by branches
-    walker.push_glob("*")?;
-    walker.for_each(|c| {
-        if let Ok(oid) = c {
-            result.push(oid);
+            _ => (),
         }
     });
-
-    Ok(result)
-}
-
-fn get_elapsed(start: Instant) -> String {
-    let elapsed = start.elapsed();
-
-    let nanos = elapsed.as_nanos();
-    let decimals = format!("{nanos}").len();
-    match decimals {
-        0..=4 => format!("{} ns", elapsed.as_nanos()),
-        5..=7 => format!("{} μs", elapsed.as_micros()),
-        8..=10 => format!("{} ms", elapsed.as_millis()),
-        _ => format!("{} s", elapsed.as_secs()),
-    }
 }
