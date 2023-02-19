@@ -1,6 +1,7 @@
 use git2::{Commit, Error, Oid, Repository};
 use itertools::Itertools;
 use std::{collections::HashSet, time::Instant};
+use rui::*;
 
 fn main() {
     let repo = match Repository::open("E:\\development\\rxjs") {
@@ -42,6 +43,19 @@ fn main() {
     //     println!("{} {:?}", branch.name().unwrap().unwrap(), branchType);
     // });
     // println!("done");
+
+    rui(state(
+        || 1,
+        |count, cx| {
+            vstack((
+                cx[count].padding(Auto),
+                button("increment", move |cx| {
+                    cx[count] += 1;
+                })
+                .padding(Auto),
+            ))
+        },
+    ));
 }
 
 #[derive(Clone)]
