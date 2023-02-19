@@ -16,7 +16,6 @@ fn main() {
 
     let commit_oids = get_commit_oids(&repo).unwrap();
     println!("Read repo oids: {}", get_elapsed(start));
-
     let start = Instant::now();
 
     // TODO is it necessary to sort them?
@@ -27,12 +26,16 @@ fn main() {
         .collect_vec();
 
     println!("Read commits + sort: {}", get_elapsed(start));
+    let start = Instant::now();
 
     let positioned_commits = position_commits(commits);
 
-    positioned_commits.iter().take(20).for_each(|positioned| {
-        println!("{} {}", positioned.position, positioned.commit.id());
-    })
+    println!("position commits: {}", get_elapsed(start));
+    let start = Instant::now();
+
+    // positioned_commits.iter().take(20).for_each(|positioned| {
+    //     println!("{} {}", positioned.position, positioned.commit.id());
+    // })
     // let branches = repo.branches(None).unwrap();
     // branches.for_each(|b| {
     //     let (branch, branchType) = b.unwrap();
