@@ -1,47 +1,91 @@
-use git2::{Commit, Error, Oid, Repository};
-use itertools::Itertools;
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
+
 use std::{collections::HashSet, time::Instant};
 
-fn main() {
+use eframe::{egui, App};
+use egui_extras::{Column, TableBuilder};
+use git2::{Commit, Error, Oid, Repository};
+use itertools::{Itertools, Position};
+
+fn main() -> Result<(), eframe::Error> {
+    // Log to stdout (if you run with `RUST_LOG=debug`).
+    tracing_subscriber::fmt::init();
+
+    let options = eframe::NativeOptions {
+        initial_window_size: Some(egui::vec2(320.0, 240.0)),
+        ..Default::default()
+    };
+
     let repo = match Repository::open("E:\\development\\rxjs") {
         Ok(repo) => repo,
         Err(e) => panic!("failed to open: {}", e),
     };
+    let repoBox = Box::new(repo);
 
-    // repo.references_glob("*")
-    //     .unwrap()
-    //     .for_each(|r| println!("Ref {:?}", r.unwrap().name()));
+    let app = MyApp::new(&repoBox);
+    eframe::run_native("My egui App", options, Box::new(|_cc| Box::new(app)))
+}
 
-    let start = Instant::now();
+struct MyApp<'a> {
+    commits: Vec<PositionedCommit<'a>>,
+}
 
-    let commit_oids = get_commit_oids(&repo).unwrap();
-    println!("Read repo oids: {}", get_elapsed(start));
-    let start = Instant::now();
+impl<'a> MyApp<'a> {
+    fn new(repo: &'a Box<Repository>) -> Self {
+        let positioned_commits = get_positioned_commits(repo);
 
-    // TODO is it necessary to sort them?
-    let commits = commit_oids
-        .iter()
-        .filter_map(|oid| repo.find_commit(*oid).ok())
-        .sorted_by(|a, b| b.time().cmp(&a.time()))
-        .collect_vec();
+        Self {
+            commits: positioned_commits,
+        }
+    }
+}
 
-    println!("Read commits + sort: {}", get_elapsed(start));
-    let start = Instant::now();
+impl<'a> eframe::App for MyApp<'a> {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let text_height = egui::TextStyle::Body.resolve(ui.style()).size;
+            let num_rows = 1000;
 
-    let positioned_commits = position_commits(commits);
+            let mut table = TableBuilder::new(ui)
+                .striped(true)
+                .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                .column(Column::auto())
+                .column(Column::initial(100.0).range(40.0..=300.0).resizable(true))
+                .min_scrolled_height(0.0);
 
-    println!("position commits: {}", get_elapsed(start));
-    let start = Instant::now();
+            table
+                .header(20.0, |mut header| {
+                    header.col(|ui| {
+                        ui.strong("Row");
+                    });
+                    header.col(|ui| {
+                        ui.strong("Graph");
+                    });
+                })
+                .body(|mut body| {
+                    body.rows(text_height, num_rows, |row_index, mut row| {
+                        row.col(|ui| {
+                            ui.label(row_index.to_string());
+                        });
+                        row.col(|ui| {
+                            ui.label(row_index.to_string());
+                        });
+                    });
+                });
 
-    // positioned_commits.iter().take(20).for_each(|positioned| {
-    //     println!("{} {}", positioned.position, positioned.commit.id());
-    // })
-    // let branches = repo.branches(None).unwrap();
-    // branches.for_each(|b| {
-    //     let (branch, branchType) = b.unwrap();
-    //     println!("{} {:?}", branch.name().unwrap().unwrap(), branchType);
-    // });
-    // println!("done");
+            // let text_style = egui::TextStyle::Body;
+            // let row_height = ui.text_style_height(&text_style);
+
+            // egui::ScrollArea::vertical()
+            //     .auto_shrink([false; 2])
+            //     .show_rows(ui, row_height, 100, |ui, row_range| {
+            //         for row in row_range {
+            //             let text = format!("This is row {}/{}", row + 1, 100);
+            //             ui.label(text);
+            //         }
+            //     });
+        });
+    }
 }
 
 #[derive(Clone)]
@@ -56,6 +100,18 @@ struct PositionedCommit<'a> {
     commit: Commit<'a>,
     position: usize,
     paths: Vec<(BranchPath, usize)>, // (path, color)
+}
+
+fn get_positioned_commits<'a>(repo: &'a Box<Repository>) -> Vec<PositionedCommit<'a>> {
+    let commit_oids = get_commit_oids(&repo).unwrap();
+    let commits = commit_oids
+        .iter()
+        .filter_map(|oid| repo.find_commit(*oid).ok())
+        .sorted_by(|a, b| b.time().cmp(&a.time()))
+        .map(|c| c.to_owned())
+        .collect_vec();
+
+    return position_commits(commits);
 }
 
 fn position_commits<'a>(commits: Vec<Commit<'a>>) -> Vec<PositionedCommit<'a>> {
