@@ -3,9 +3,11 @@
 use std::{collections::HashSet, time::Instant};
 
 use eframe::{egui, App};
+use egui::{Color32, Pos2};
 use egui_extras::{Column, TableBuilder};
-use git2::{Commit, Error, Oid, Repository};
+use git2::{Commit, Error, Oid, Repository, Signature, Time};
 use itertools::{Itertools, Position};
+use tracing_subscriber::fmt::format;
 
 fn main() -> Result<(), eframe::Error> {
     // Log to stdout (if you run with `RUST_LOG=debug`).
@@ -20,18 +22,17 @@ fn main() -> Result<(), eframe::Error> {
         Ok(repo) => repo,
         Err(e) => panic!("failed to open: {}", e),
     };
-    let repoBox = Box::new(repo);
 
-    let app = MyApp::new(&repoBox);
+    let app = MyApp::new(&repo);
     eframe::run_native("My egui App", options, Box::new(|_cc| Box::new(app)))
 }
 
-struct MyApp<'a> {
-    commits: Vec<PositionedCommit<'a>>,
+struct MyApp {
+    commits: Vec<PositionedCommit>,
 }
 
-impl<'a> MyApp<'a> {
-    fn new(repo: &'a Box<Repository>) -> Self {
+impl MyApp {
+    fn new(repo: &Repository) -> Self {
         let positioned_commits = get_positioned_commits(repo);
 
         Self {
@@ -40,35 +41,74 @@ impl<'a> MyApp<'a> {
     }
 }
 
-impl<'a> eframe::App for MyApp<'a> {
+impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let palette = vec![
+            Color32::from_rgb(100, 200, 50),
+            Color32::from_rgb(200, 100, 50),
+            Color32::from_rgb(100, 50, 200),
+            Color32::from_rgb(50, 200, 100),
+            Color32::from_rgb(200, 50, 100),
+            Color32::from_rgb(50, 100, 200),
+        ];
+        let radius = 5.0;
+
         egui::CentralPanel::default().show(ctx, |ui| {
             let text_height = egui::TextStyle::Body.resolve(ui.style()).size;
-            let num_rows = 1000;
+            let num_rows = self.commits.len();
 
-            let mut table = TableBuilder::new(ui)
+            let table = TableBuilder::new(ui)
                 .striped(true)
                 .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                .column(Column::auto())
-                .column(Column::initial(100.0).range(40.0..=300.0).resizable(true))
+                .column(
+                    Column::initial(100.0)
+                        .range((radius * 2.0)..=300.0)
+                        .resizable(true),
+                )
+                .column(Column::remainder())
                 .min_scrolled_height(0.0);
 
             table
                 .header(20.0, |mut header| {
                     header.col(|ui| {
-                        ui.strong("Row");
+                        // Header prevents the column from getting smaller than its width
+                        // ui.strong("Graph");
                     });
                     header.col(|ui| {
-                        ui.strong("Graph");
+                        ui.strong("Message");
                     });
                 })
-                .body(|mut body| {
+                .body(|body| {
                     body.rows(text_height, num_rows, |row_index, mut row| {
+                        let commit = &self.commits[row_index];
+                        let position = commit.position as f32;
+
                         row.col(|ui| {
-                            ui.label(row_index.to_string());
+                            let available_space = ui.available_size();
+                            let desired_size = egui::vec2(
+                                available_space.x.min(position * radius * 2.0),
+                                available_space.y,
+                            );
+                            let (rect, _) =
+                                ui.allocate_exact_size(desired_size, egui::Sense::hover());
+
+                            if ui.is_rect_visible(rect) {
+                                ui.painter().circle_filled(
+                                    Pos2::new(
+                                        rect.left()
+                                            + radius
+                                            + (position * radius * 2.0)
+                                                .min(available_space.x - 2.0 * radius),
+                                        rect.center().y,
+                                    ),
+                                    radius,
+                                    palette[commit.position % palette.len()],
+                                );
+                            }
                         });
                         row.col(|ui| {
-                            ui.label(row_index.to_string());
+                            let summary = &commit.commit.summary;
+                            ui.label(summary.to_owned().unwrap_or("".to_owned()));
                         });
                     });
                 });
@@ -96,13 +136,35 @@ enum BranchPath {
                    // Line(usize, usize), // top -> bottom
 }
 
-struct PositionedCommit<'a> {
-    commit: Commit<'a>,
+struct CommitInfo {
+    id: Oid,
+    summary: Option<String>,
+    body: Option<String>,
+    time: Time,
+    author: Signature<'static>,
+    committer: Signature<'static>,
+}
+
+impl CommitInfo {
+    fn new(commit: &Commit) -> Self {
+        CommitInfo {
+            id: commit.id(),
+            summary: commit.summary().map(|v| v.to_owned()),
+            body: commit.body().map(|v| v.to_owned()),
+            time: commit.time(),
+            author: commit.author().to_owned(),
+            committer: commit.committer().to_owned(),
+        }
+    }
+}
+
+struct PositionedCommit {
+    commit: CommitInfo,
     position: usize,
     paths: Vec<(BranchPath, usize)>, // (path, color)
 }
 
-fn get_positioned_commits<'a>(repo: &'a Box<Repository>) -> Vec<PositionedCommit<'a>> {
+fn get_positioned_commits(repo: &Repository) -> Vec<PositionedCommit> {
     let commit_oids = get_commit_oids(&repo).unwrap();
     let commits = commit_oids
         .iter()
@@ -114,7 +176,7 @@ fn get_positioned_commits<'a>(repo: &'a Box<Repository>) -> Vec<PositionedCommit
     return position_commits(commits);
 }
 
-fn position_commits<'a>(commits: Vec<Commit<'a>>) -> Vec<PositionedCommit<'a>> {
+fn position_commits(commits: Vec<Commit>) -> Vec<PositionedCommit> {
     let mut result = vec![];
     let mut branches: Vec<Option<(Oid, usize)>> = vec![];
 
@@ -241,7 +303,7 @@ fn position_commits<'a>(commits: Vec<Commit<'a>>) -> Vec<PositionedCommit<'a>> {
         }
 
         result.push(PositionedCommit {
-            commit,
+            commit: CommitInfo::new(&commit),
             position,
             paths,
         });
