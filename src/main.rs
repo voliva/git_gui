@@ -41,18 +41,10 @@ impl MyApp {
     }
 }
 
+static RADIUS: f32 = 5.0;
+
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let palette = vec![
-            Color32::from_rgb(100, 200, 50),
-            Color32::from_rgb(200, 100, 50),
-            Color32::from_rgb(100, 50, 200),
-            Color32::from_rgb(50, 200, 100),
-            Color32::from_rgb(200, 50, 100),
-            Color32::from_rgb(50, 100, 200),
-        ];
-        let radius = 5.0;
-
         egui::CentralPanel::default().show(ctx, |ui| {
             let text_height = egui::TextStyle::Body.resolve(ui.style()).size;
             let num_rows = self.commits.len();
@@ -62,7 +54,7 @@ impl eframe::App for MyApp {
                 .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
                 .column(
                     Column::initial(100.0)
-                        .range((radius * 2.0)..=300.0)
+                        .range((RADIUS * 2.0)..=300.0)
                         .resizable(true),
                 )
                 .column(Column::remainder())
@@ -81,30 +73,9 @@ impl eframe::App for MyApp {
                 .body(|body| {
                     body.rows(text_height, num_rows, |row_index, mut row| {
                         let commit = &self.commits[row_index];
-                        let position = commit.position as f32;
 
                         row.col(|ui| {
-                            let available_space = ui.available_size();
-                            let desired_size = egui::vec2(
-                                available_space.x.min(position * radius * 2.0),
-                                available_space.y,
-                            );
-                            let (rect, _) =
-                                ui.allocate_exact_size(desired_size, egui::Sense::hover());
-
-                            if ui.is_rect_visible(rect) {
-                                ui.painter().circle_filled(
-                                    Pos2::new(
-                                        rect.left()
-                                            + radius
-                                            + (position * radius * 2.0)
-                                                .min(available_space.x - 2.0 * radius),
-                                        rect.center().y,
-                                    ),
-                                    radius,
-                                    palette[commit.position % palette.len()],
-                                );
-                            }
+                            graph_line(ui, &commit);
                         });
                         row.col(|ui| {
                             let summary = &commit.commit.summary;
@@ -125,6 +96,41 @@ impl eframe::App for MyApp {
             //         }
             //     });
         });
+    }
+}
+
+fn graph_line(ui: &mut egui::Ui, positioned: &PositionedCommit) {
+    lazy_static::lazy_static! {
+        static ref  PALETTE: Vec<Color32> = vec![
+            Color32::from_rgb(100, 200, 50),
+            Color32::from_rgb(200, 100, 50),
+            Color32::from_rgb(100, 50, 200),
+            Color32::from_rgb(50, 200, 100),
+            Color32::from_rgb(200, 50, 100),
+            Color32::from_rgb(50, 100, 200),
+        ];
+    }
+
+    let position = positioned.position as f32;
+
+    let available_space = ui.available_size();
+    let desired_size = egui::vec2(
+        available_space.x.min(position * RADIUS * 2.0),
+        available_space.y,
+    );
+    let (rect, _) = ui.allocate_exact_size(desired_size, egui::Sense::hover());
+
+    if ui.is_rect_visible(rect) {
+        ui.painter().circle_filled(
+            Pos2::new(
+                rect.left()
+                    + RADIUS
+                    + (position * RADIUS * 2.0).min(available_space.x - 2.0 * RADIUS),
+                rect.center().y,
+            ),
+            RADIUS,
+            PALETTE[positioned.position % PALETTE.len()],
+        );
     }
 }
 

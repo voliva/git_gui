@@ -919,6 +919,7 @@ dependencies = [
  "egui_extras",
  "git2",
  "itertools",
+ "lazy_static",
  "tracing-subscriber",
 ]
 
