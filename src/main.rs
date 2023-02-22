@@ -3,7 +3,7 @@
 use std::{collections::HashSet, time::Instant};
 
 use eframe::{egui, App};
-use egui::{Color32, Pos2};
+use egui::{Color32, Pos2, Rect, Stroke, Vec2};
 use egui_extras::{Column, TableBuilder};
 use git2::{Commit, Error, Oid, Repository, Signature, Time};
 use itertools::{Itertools, Position};
@@ -114,13 +114,56 @@ fn graph_line(ui: &mut egui::Ui, positioned: &PositionedCommit) {
     let position = positioned.position as f32;
 
     let available_space = ui.available_size();
+
+    let max_position = positioned
+        .paths
+        .iter()
+        .map(|(path, _)| match path {
+            BranchPath::Base(v) => v,
+            BranchPath::Follow(v) => v,
+            BranchPath::Parent(v) => v,
+        })
+        .max()
+        .map(|v| *v)
+        .unwrap_or(0)
+        .max(positioned.position) as f32;
+
     let desired_size = egui::vec2(
-        available_space.x.min(position * RADIUS * 2.0),
+        available_space.x.min(max_position * RADIUS * 2.0),
         available_space.y,
     );
     let (rect, _) = ui.allocate_exact_size(desired_size, egui::Sense::hover());
 
     if ui.is_rect_visible(rect) {
+        positioned.paths.iter().for_each(|(path, color)| {
+            match path {
+                BranchPath::Base(v) => draw_base(
+                    ui,
+                    &rect,
+                    &available_space,
+                    PALETTE[*color % PALETTE.len()],
+                    positioned.position,
+                    *v,
+                ),
+                BranchPath::Follow(v) => draw_follow(
+                    ui,
+                    &rect,
+                    &available_space,
+                    PALETTE[*color % PALETTE.len()],
+                    *v,
+                ),
+                BranchPath::Parent(v) => draw_parent(
+                    ui,
+                    &rect,
+                    &available_space,
+                    PALETTE[*color % PALETTE.len()],
+                    positioned.position,
+                    *v,
+                ),
+            };
+        });
+
+        // Draw the commit dot
         ui.painter().circle_filled(
             Pos2::new(
                 rect.left()
@@ -132,6 +175,74 @@ fn graph_line(ui: &mut egui::Ui, positioned: &PositionedCommit) {
             PALETTE[positioned.position % PALETTE.len()],
         );
     }
+}
+fn draw_base(
+    ui: &mut egui::Ui,
+    rect: &Rect,
+    available: &Vec2,
+    color: Color32,
+    position: usize,
+    to: usize,
+) {
+    if position.max(to) as f32 * RADIUS * 2.0 + RADIUS > available.x - RADIUS {
+        return;
+    }
+    ui.painter().line_segment(
+        [
+            Pos2::new(
+                rect.left() + RADIUS + (position as f32) * RADIUS * 2.0,
+                rect.center().y,
+            ),
+            Pos2::new(
+                rect.left() + RADIUS + to as f32 * RADIUS * 2.0,
+                rect.top() - 1.0,
+            ),
+        ],
+        Stroke::new(1.0, color),
+    )
+}
+fn draw_parent(
+    ui: &mut egui::Ui,
+    rect: &Rect,
+    available: &Vec2,
+    color: Color32,
+    position: usize,
+    to: usize,
+) {
+    if position.max(to) as f32 * RADIUS * 2.0 + RADIUS > available.x - RADIUS {
+        return;
+    }
+    ui.painter().line_segment(
+        [
+            Pos2::new(
+                rect.left() + RADIUS + (position as f32) * RADIUS * 2.0,
+                rect.center().y,
+            ),
+            Pos2::new(
+                rect.left() + RADIUS + to as f32 * RADIUS * 2.0,
+                rect.bottom() + 1.0,
+            ),
+        ],
+        Stroke::new(1.0, color),
+    )
+}
+fn draw_follow(ui: &mut egui::Ui, rect: &Rect, available: &Vec2, color: Color32, position: usize) {
+    if position as f32 * RADIUS * 2.0 + RADIUS > available.x - RADIUS {
+        return;
+    }
+    ui.painter().line_segment(
+        [
+            Pos2::new(
+                rect.left() + RADIUS + (position as f32) * RADIUS * 2.0,
+                rect.top() - 1.0,
+            ),
+            Pos2::new(
+                rect.left() + RADIUS + (position as f32) * RADIUS * 2.0,
+                rect.bottom() + 1.0,
+            ),
+        ],
+        Stroke::new(1.0, color),
+    )
 }
 
 #[derive(Clone)]
@@ -336,7 +447,7 @@ fn get_commit_oids(repo: &Repository) -> Result<Vec<Oid>, Error> {
 
     let mut walker = repo.revwalk()?;
     // Use "refs/heads" if you only want to get commits held by branches
-    walker.push_glob("*")?;
+    walker.push_glob("refs/heads")?;
     walker.for_each(|c| {
         if let Ok(oid) = c {
             result.push(oid);
