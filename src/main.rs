@@ -18,10 +18,12 @@ fn main() -> Result<(), eframe::Error> {
         ..Default::default()
     };
 
-    let repo = match Repository::open("E:\\development\\rxjs") {
+    let mut timer = Timer::new();
+    let repo = match Repository::open("/Users/victor/development/ads/alpha") {
         Ok(repo) => repo,
         Err(e) => panic!("failed to open: {}", e),
     };
+    println!("Open repo {}", timer.lap());
 
     let app = MyApp::new(&repo);
     eframe::run_native("My egui App", options, Box::new(|_cc| Box::new(app)))
@@ -282,15 +284,23 @@ struct PositionedCommit {
 }
 
 fn get_positioned_commits(repo: &Repository) -> Vec<PositionedCommit> {
+    let mut timer = Timer::new();
+
     let commit_oids = get_commit_oids(&repo).unwrap();
+    println!("get commits {}", timer.lap());
+
     let commits = commit_oids
         .iter()
         .filter_map(|oid| repo.find_commit(*oid).ok())
         .sorted_by(|a, b| b.time().cmp(&a.time()))
         .map(|c| c.to_owned())
         .collect_vec();
+    println!("Sort commits {}", timer.lap());
 
-    return position_commits(commits);
+    let result = position_commits(commits);
+    println!("Position commits {}", timer.lap());
+
+    return result;
 }
 
 fn position_commits(commits: Vec<Commit>) -> Vec<PositionedCommit> {
@@ -457,15 +467,28 @@ fn get_commit_oids(repo: &Repository) -> Result<Vec<Oid>, Error> {
     Ok(result)
 }
 
-fn get_elapsed(start: Instant) -> String {
-    let elapsed = start.elapsed();
+struct Timer {
+    start: Instant,
+}
 
-    let nanos = elapsed.as_nanos();
-    let decimals = format!("{nanos}").len();
-    match decimals {
-        0..=4 => format!("{} ns", elapsed.as_nanos()),
-        5..=7 => format!("{} μs", elapsed.as_micros()),
-        8..=10 => format!("{} ms", elapsed.as_millis()),
-        _ => format!("{} s", elapsed.as_secs()),
+impl Timer {
+    fn new() -> Self {
+        Timer {
+            start: Instant::now(),
+        }
+    }
+
+    fn lap(&mut self) -> String {
+        let elapsed = self.start.elapsed();
+        self.start = Instant::now();
+
+        let nanos = elapsed.as_nanos();
+        let decimals = format!("{nanos}").len();
+        match decimals {
+            0..=4 => format!("{} ns", elapsed.as_nanos()),
+            5..=7 => format!("{} μs", elapsed.as_micros()),
+            8..=10 => format!("{} ms", elapsed.as_millis()),
+            _ => format!("{} s", elapsed.as_secs()),
+        }
     }
 }
