@@ -914,6 +914,7 @@ dependencies = [
 name = "git_gui"
 version = "0.1.0"
 dependencies = [
+ "derivative",
  "eframe",
  "egui",
  "egui_extras",
