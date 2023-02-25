@@ -1,0 +1,15 @@
+.gridContainer {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.scrollArea {
+  overflow: auto;
+}
+.headerContainer {
+  display: flex;
+}
+
+.itemContainer {
+  width: 100%;
+}

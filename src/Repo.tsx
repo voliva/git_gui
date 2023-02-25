@@ -1,13 +1,11 @@
-import {
-  VirtualContainer,
-  VirtualItemProps,
-} from "@minht11/solid-virtual-container";
+import { VirtualItemProps } from "@minht11/solid-virtual-container";
 import { state } from "@react-rxjs/core";
 import { invoke } from "@tauri-apps/api";
 import { defer } from "rxjs";
-import { readState } from "./rxState";
-import classes from "./Repo.module.css";
 import { createEffect } from "solid-js";
+import { Column, Grid } from "./Grid";
+import classes from "./Repo.module.css";
+import { readState } from "./rxState";
 
 interface CommitInfo {
   id: string;
@@ -38,23 +36,23 @@ const MERGE_RADIUS = 4;
 export function Repo() {
   const commits = readState(commits$, null);
 
-  let scrollTargetElement!: HTMLDivElement;
-
   return (
-    <div style={{ overflow: "auto", height: "80vh" }} ref={scrollTargetElement}>
+    <>
       {commits() ? (
-        <VirtualContainer
-          items={commits()!}
-          scrollTarget={scrollTargetElement}
-          // Define size you wish your list items to take.
-          itemSize={{ height: ITEM_HEIGHT }}
-        >
-          {ListItem}
-        </VirtualContainer>
+        <Grid items={commits()!} itemSize={{ height: ITEM_HEIGHT }}>
+          <Column header="Foo">{Foo}</Column>
+          <Column header="Bar">{Foo}</Column>
+        </Grid>
       ) : null}
-    </div>
+    </>
   );
 }
+
+const Foo = (props: any) => {
+  console.log("foo", props);
+
+  return <div>Foo</div>;
+};
 
 const ListItem = (props: VirtualItemProps<PositionedCommit>) => (
   <div
