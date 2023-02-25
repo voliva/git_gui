@@ -3,7 +3,11 @@
     windows_subsystem = "windows"
 )]
 
+mod positioned_commit;
+mod timer;
+
 use git2::Repository;
+use positioned_commit::{get_positioned_commits, PositionedCommit};
 use serde::Serialize;
 use std::fs;
 use std::path::PathBuf;
@@ -77,12 +81,37 @@ fn open_repo(
     }
 }
 
-fn main() {
-    // tauri::api::path::app_local_data_dir();
-    // tauri::api::file::read_string(file)
+#[derive(Serialize)]
+enum GetCommitsError {
+    NotOpen,
+    ConcurrentError,
+}
 
+impl<T> From<PoisonError<T>> for GetCommitsError {
+    fn from(_: PoisonError<T>) -> Self {
+        GetCommitsError::ConcurrentError
+    }
+}
+
+#[tauri::command]
+fn get_commits(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<PositionedCommit>, GetCommitsError> {
+    let mutex_repo = state.repository.lock()?;
+
+    mutex_repo
+        .as_ref()
+        .map(|(repo, _)| get_positioned_commits(repo))
+        .ok_or(GetCommitsError::NotOpen)
+}
+
+fn main() {
     let app = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![open_repo, get_repo_name])
+        .invoke_handler(tauri::generate_handler![
+            open_repo,
+            get_repo_name,
+            get_commits
+        ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
 

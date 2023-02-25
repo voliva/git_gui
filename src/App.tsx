@@ -2,6 +2,7 @@ import { state } from "@react-rxjs/core";
 import { createSignal } from "@react-rxjs/utils";
 import { invoke } from "@tauri-apps/api/tauri";
 import { concat, filter, from, map, merge, switchMap, tap } from "rxjs";
+import { Show } from "solid-js";
 import "./App.css";
 import { Repo } from "./Repo";
 import { openRepo, repo$ } from "./repoState";
@@ -12,13 +13,16 @@ function App() {
 
   return (
     <div class="container">
-      {repo() ? (
+      <Show
+        when={repo()}
+        fallback={
+          <button type="button" onClick={openRepo}>
+            Open
+          </button>
+        }
+      >
         <Repo />
-      ) : (
-        <button type="button" onClick={openRepo}>
-          Open
-        </button>
-      )}
+      </Show>
     </div>
   );
 }
