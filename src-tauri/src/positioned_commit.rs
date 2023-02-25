@@ -14,6 +14,7 @@ pub struct CommitInfo {
     pub summary: Option<String>,
     pub body: Option<String>,
     pub time: i64,
+    pub is_merge: bool,
     #[derivative(Debug = "ignore")]
     #[serde(skip)]
     pub author: Signature<'static>,
@@ -29,6 +30,7 @@ impl CommitInfo {
             summary: commit.summary().map(|v| v.to_owned()),
             body: commit.body().map(|v| v.to_owned()),
             time: commit.time().seconds(),
+            is_merge: commit.parent_count() > 1,
             author: commit.author().to_owned(),
             committer: commit.committer().to_owned(),
         }
@@ -36,6 +38,7 @@ impl CommitInfo {
 }
 
 #[derive(Clone, Debug, Serialize)]
+#[serde(tag = "type", content = "payload")]
 pub enum BranchPath {
     Base(usize),   // top -> commit
     Parent(usize), // commit -> bottom
@@ -47,6 +50,7 @@ pub enum BranchPath {
 pub struct PositionedCommit {
     pub commit: CommitInfo,
     pub position: usize,
+    pub color: usize,
     pub paths: Vec<(BranchPath, usize)>, // (path, color)
 }
 
@@ -198,6 +202,7 @@ fn position_commits(commits: Vec<Commit>) -> Vec<PositionedCommit> {
 
         result.push(PositionedCommit {
             commit: CommitInfo::new(&commit),
+            color,
             position,
             paths,
         });
