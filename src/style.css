@@ -4,8 +4,8 @@
   line-height: 24px;
   font-weight: 400;
 
-  --app-foreground: #0f0f0f;
-  --app-background: #f6f6f6;
+  --app-foreground: #f6f6f6;
+  --app-background: #2f2f2f;
 
   color: var(--app-foreground);
   background-color: var(--app-background);
@@ -62,7 +62,7 @@ a {
 }
 
 a:hover {
-  color: #535bf2;
+  color: #24c8db;
 }
 
 h1 {
@@ -77,8 +77,8 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
+  color: #ffffff;
+  background-color: #0f0f0f98;
   transition: border-color 0.25s;
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
 }
@@ -98,21 +98,4 @@ button {
 
 #greet-input {
   margin-right: 5px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --app-foreground: #f6f6f6;
-    --app-background: #2f2f2f;
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
 }

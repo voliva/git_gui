@@ -36,23 +36,34 @@ const MERGE_RADIUS = 4;
 export function Repo() {
   const commits = readState(commits$, null);
 
+  const getMaxWidth = () => {
+    const position =
+      commits()
+        ?.flatMap((positioned) => [
+          positioned.position,
+          ...positioned.paths.map(([path, _]) => path.payload),
+        ])
+        .reduce((a, b) => Math.max(a, b)) ?? 0;
+    return getPositionMaxX(position);
+  };
+
   return (
     <>
       {commits() ? (
         <Grid items={commits()!} itemSize={{ height: ITEM_HEIGHT }}>
-          <Column width={50}>{GraphCell}</Column>
+          <Column
+            width={50}
+            minWidth={COMMIT_RADIUS * 2}
+            maxWidth={getMaxWidth()}
+          >
+            {GraphCell}
+          </Column>
           <Column header="Commit">{CommitCell}</Column>
         </Grid>
       ) : null}
     </>
   );
 }
-
-const Foo = (props: any) => {
-  console.log("foo", props);
-
-  return <div>Foo</div>;
-};
 
 const COLORS = [
   "rgb(100, 200, 50)",
@@ -74,6 +85,18 @@ const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
 
     ctx.clearRect(0, 0, width, ref.height);
     props.item.paths.forEach((path) => drawPath(ctx, width, position, path));
+    const maxPosition = [
+      position,
+      ...props.item.paths.map(([path]) => path.payload),
+    ].reduce((a, b) => Math.max(a, b));
+    if (getPositionMaxX(maxPosition) > width) {
+      const xStart = width - COMMIT_RADIUS * 3;
+      const grd = ctx.createLinearGradient(xStart, 0, width, 0);
+      grd.addColorStop(0, "#2f2f2f00");
+      grd.addColorStop(0.5, "#2f2f2fff");
+      ctx.fillStyle = grd;
+      ctx.fillRect(xStart, 0, width, ITEM_HEIGHT);
+    }
     drawCommit(ctx, width, props.item);
   });
 
@@ -98,11 +121,7 @@ function drawCommit(
 ) {
   ctx.beginPath();
   ctx.arc(
-    COMMIT_RADIUS +
-      Math.min(
-        positionedCommit.position * COMMIT_RADIUS * 2,
-        width - 2 * COMMIT_RADIUS
-      ),
+    Math.min(getPositionX(positionedCommit.position), width - COMMIT_RADIUS),
     ITEM_HEIGHT / 2,
     positionedCommit.commit.is_merge ? MERGE_RADIUS : COMMIT_RADIUS,
     0,
@@ -134,14 +153,14 @@ function drawBase(
   commitPos: number,
   pos: number
 ) {
-  if ((Math.min(commitPos, pos) + 1) * COMMIT_RADIUS * 2 > width) {
+  if (getPositionMaxX(Math.min(commitPos, pos)) > width) {
     return;
   }
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
   ctx.lineWidth = 1;
-  ctx.moveTo(COMMIT_RADIUS + commitPos * COMMIT_RADIUS * 2, ITEM_HEIGHT / 2);
-  ctx.lineTo(COMMIT_RADIUS + pos * COMMIT_RADIUS * 2, 0);
+  ctx.moveTo(getPositionX(commitPos), ITEM_HEIGHT / 2);
+  ctx.lineTo(getPositionX(pos), 0);
   ctx.stroke();
 }
 function drawFollow(
@@ -150,15 +169,15 @@ function drawFollow(
   color: number,
   pos: number
 ) {
-  if ((pos + 1) * COMMIT_RADIUS * 2 > width) {
+  if (getPositionMaxX(pos) > width) {
     return;
   }
 
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
   ctx.lineWidth = 1;
-  ctx.moveTo(COMMIT_RADIUS + pos * COMMIT_RADIUS * 2, 0);
-  ctx.lineTo(COMMIT_RADIUS + pos * COMMIT_RADIUS * 2, ITEM_HEIGHT);
+  ctx.moveTo(getPositionX(pos), 0);
+  ctx.lineTo(getPositionX(pos), ITEM_HEIGHT);
   ctx.stroke();
 }
 function drawParent(
@@ -168,13 +187,20 @@ function drawParent(
   commitPos: number,
   pos: number
 ) {
-  if ((Math.min(commitPos, pos) + 1) * COMMIT_RADIUS * 2 > width) {
+  if (getPositionMaxX(Math.min(commitPos, pos)) > width) {
     return;
   }
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
   ctx.lineWidth = 1;
-  ctx.moveTo(COMMIT_RADIUS + commitPos * COMMIT_RADIUS * 2, ITEM_HEIGHT / 2);
-  ctx.lineTo(COMMIT_RADIUS + pos * COMMIT_RADIUS * 2, ITEM_HEIGHT);
+  ctx.moveTo(getPositionX(commitPos), ITEM_HEIGHT / 2);
+  ctx.lineTo(getPositionX(pos), ITEM_HEIGHT);
   ctx.stroke();
+}
+
+function getPositionX(position: number) {
+  return COMMIT_RADIUS + position * COMMIT_RADIUS * 2;
+}
+function getPositionMaxX(position: number) {
+  return getPositionX(position) + COMMIT_RADIUS;
 }
