@@ -1,15 +1,30 @@
 .gridContainer {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.scrollArea {
   overflow: auto;
+  user-select: none;
+
+  --default-grid-bg: var(--app-background);
 }
+
 .headerContainer {
+  position: sticky;
+  top: 0;
   display: flex;
+  background-color: var(--grid-bg, var(--default-grid-bg));
+  z-index: 1; /* Above virtualContainer */
+}
+.virtualContainer {
+  z-index: 0; /* Below headerContainer */
 }
 
 .itemContainer {
   width: 100%;
+  display: flex;
+  background-color: var(--grid-bg, var(--default-grid-bg));
+}
+
+.cellAuto {
+  flex: 1 1 1%;
+}
+.cellFixed {
+  flex: 0 0 1%;
 }

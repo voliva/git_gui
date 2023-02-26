@@ -3,7 +3,7 @@ import { state } from "@react-rxjs/core";
 import { invoke } from "@tauri-apps/api";
 import { defer } from "rxjs";
 import { createEffect } from "solid-js";
-import { Column, Grid } from "./Grid";
+import { CellRendererProps, Column, Grid } from "./Grid";
 import classes from "./Repo.module.css";
 import { readState } from "./rxState";
 
@@ -40,8 +40,8 @@ export function Repo() {
     <>
       {commits() ? (
         <Grid items={commits()!} itemSize={{ height: ITEM_HEIGHT }}>
-          <Column header="Foo">{Foo}</Column>
-          <Column header="Bar">{Foo}</Column>
+          <Column width={50}>{GraphCell}</Column>
+          <Column header="Commit">{CommitCell}</Column>
         </Grid>
       ) : null}
     </>
@@ -54,20 +54,6 @@ const Foo = (props: any) => {
   return <div>Foo</div>;
 };
 
-const ListItem = (props: VirtualItemProps<PositionedCommit>) => (
-  <div
-    class={classes.commitRow}
-    // Required for items to switch places.
-    style={{ ...props.style }}
-    // Used for keyboard navigation and accessibility.
-    tabIndex={props.tabIndex}
-    role="listitem"
-  >
-    <CommitGraph positionedCommit={props.item} />
-    <div class={classes.commitSummary}>{props.item.commit.summary}</div>
-  </div>
-);
-
 const COLORS = [
   "rgb(100, 200, 50)",
   "rgb(200, 100, 50)",
@@ -78,29 +64,31 @@ const COLORS = [
 ];
 const getColor = (i: number) => COLORS[i % COLORS.length];
 
-const CommitGraph = (props: { positionedCommit: PositionedCommit }) => {
+const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
   let ref!: HTMLCanvasElement;
 
   createEffect(() => {
-    const position = props.positionedCommit.position;
+    const position = props.item.position;
     const ctx = ref.getContext("2d")!;
     const width = ref.width;
 
     ctx.clearRect(0, 0, width, ref.height);
-    props.positionedCommit.paths.forEach((path) =>
-      drawPath(ctx, width, position, path)
-    );
-    drawCommit(ctx, width, props.positionedCommit);
+    props.item.paths.forEach((path) => drawPath(ctx, width, position, path));
+    drawCommit(ctx, width, props.item);
   });
 
   return (
     <canvas
       height={ITEM_HEIGHT}
-      width={200}
+      width={props.width ?? 100}
       class={classes.commitGraph}
       ref={ref}
     />
   );
+};
+
+const CommitCell = (props: CellRendererProps<PositionedCommit>) => {
+  return <>{props.item.commit.summary}</>;
 };
 
 function drawCommit(
@@ -146,9 +134,9 @@ function drawBase(
   commitPos: number,
   pos: number
 ) {
-  // if position.max(to) as f32 * RADIUS * 2.0 + RADIUS > available.x - RADIUS {
-  //     return;
-  // }
+  if ((Math.min(commitPos, pos) + 1) * COMMIT_RADIUS * 2 > width) {
+    return;
+  }
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
   ctx.lineWidth = 1;
@@ -162,9 +150,9 @@ function drawFollow(
   color: number,
   pos: number
 ) {
-  // if position as f32 * RADIUS * 2.0 + RADIUS > available.x - RADIUS {
-  //     return;
-  // }
+  if ((pos + 1) * COMMIT_RADIUS * 2 > width) {
+    return;
+  }
 
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
@@ -180,9 +168,9 @@ function drawParent(
   commitPos: number,
   pos: number
 ) {
-  // if position.max(to) as f32 * RADIUS * 2.0 + RADIUS > available.x - RADIUS {
-  //     return;
-  // }
+  if ((Math.min(commitPos, pos) + 1) * COMMIT_RADIUS * 2 > width) {
+    return;
+  }
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
   ctx.lineWidth = 1;
