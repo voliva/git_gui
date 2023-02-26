@@ -3,7 +3,8 @@ import {
   VirtualItemProps,
   VirtualItemSize,
 } from "@minht11/solid-virtual-container";
-import { children, For, JSXElement } from "solid-js";
+import { children, createSignal, For, JSXElement, Show } from "solid-js";
+import { ReactiveWeakMap } from "@solid-primitives/map";
 import { Dynamic } from "solid-js/web";
 import classes from "./Grid.module.css";
 
@@ -13,6 +14,13 @@ export const Grid = <T extends any>(props: {
   children: any;
 }) => {
   const resolved = children(() => props.children);
+  /**
+   * This approach is flawed, it only works if the last column is auto-sized
+   */
+  const userWidths = new ReactiveWeakMap<ColumnProps, number>();
+  const getColumnWidth = (column: ColumnProps) => {
+    return userWidths.get(column) ?? column.width;
+  };
 
   const ListItem = (listProps: VirtualItemProps<T>) => {
     return (
@@ -30,13 +38,13 @@ export const Grid = <T extends any>(props: {
             if (!props) return null;
 
             return (
-              <Cell width={props.width}>
+              <Cell width={getColumnWidth(props)}>
                 <Dynamic
                   component={props.children}
                   items={listProps.items}
                   item={listProps.item}
                   rowIndex={listProps.index}
-                  width={props.width ?? null}
+                  width={getColumnWidth(props)}
                   columnIndex={columnIndex()}
                   columnProps={props}
                 />
@@ -54,7 +62,37 @@ export const Grid = <T extends any>(props: {
         const props = item as any as ColumnProps | null;
         if (!props) return null;
 
-        return <Cell width={props.width}>{props.header}</Cell>;
+        const onMouseDown = (evt: MouseEvent) => {
+          const initialWidth = getColumnWidth(props) ?? 50;
+          const initialMouseX = evt.screenX;
+          // querying maxWidth + minWidth can be costly, and we can assume it won't change during drag, only calculate once.
+          const maxWidth = props.maxWidth;
+          const minWidth = props.minWidth;
+          const onMouseMove = (evt: MouseEvent) => {
+            const delta = evt.screenX - initialMouseX;
+            const targetX = initialWidth + delta;
+            const boundX = Math.min(
+              Math.max(targetX, minWidth ?? 0),
+              maxWidth ?? Number.POSITIVE_INFINITY
+            );
+            userWidths.set(props, boundX);
+          };
+          const onMouseUp = () => {
+            window.removeEventListener("mousemove", onMouseMove);
+            window.removeEventListener("mouseup", onMouseUp);
+          };
+          window.addEventListener("mousemove", onMouseMove);
+          window.addEventListener("mouseup", onMouseUp);
+        };
+
+        return (
+          <Cell width={getColumnWidth(props)}>
+            <span>{props.header}</span>
+            <Show when={props.minWidth !== undefined}>
+              <div class={classes.resizer} onMouseDown={onMouseDown}></div>
+            </Show>
+          </Cell>
+        );
       }}
     </For>
   );
@@ -84,6 +122,7 @@ const Cell = (props: { width?: number; children: JSXElement }) => (
     }}
     style={{
       "flex-basis": props.width === undefined ? undefined : `${props.width}px`,
+      width: props.width === undefined ? undefined : `${props.width}px`,
     }}
   >
     {props.children}
@@ -94,7 +133,7 @@ export interface CellRendererProps<T> {
   items: readonly T[];
   item: T;
   rowIndex: number;
-  width: number | null;
+  width: number | undefined;
   columnIndex: number;
   columnProps: ColumnProps;
 }
