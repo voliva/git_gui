@@ -1,13 +1,11 @@
-import {
-  VirtualContainer,
-  VirtualItemProps,
-} from "@minht11/solid-virtual-container";
+import { VirtualItemProps } from "@minht11/solid-virtual-container";
 import { state } from "@react-rxjs/core";
 import { invoke } from "@tauri-apps/api";
 import { defer } from "rxjs";
-import { readState } from "./rxState";
+import { createEffect, createMemo } from "solid-js";
+import { CellRendererProps, Column, Grid } from "./Grid";
 import classes from "./Repo.module.css";
-import { createEffect } from "solid-js";
+import { readState } from "./rxState";
 
 interface CommitInfo {
   id: string;
@@ -31,44 +29,46 @@ interface PositionedCommit {
 
 const commits$ = state(defer(() => invoke<PositionedCommit[]>("get_commits")));
 
-const ITEM_HEIGHT = 20;
-const COMMIT_RADIUS = 6;
-const MERGE_RADIUS = 4;
+const ITEM_HEIGHT = 30;
+const COMMIT_RADIUS = 8;
+const MERGE_RADIUS = 6;
+const GRAPH_MARGIN = 3;
 
 export function Repo() {
   const commits = readState(commits$, null);
 
-  let scrollTargetElement!: HTMLDivElement;
+  const getMaxWidth = createMemo(() => {
+    const position =
+      commits()
+        ?.flatMap((positioned) => [
+          positioned.position,
+          ...positioned.paths.map(([path, _]) => path.payload),
+        ])
+        .reduce((a, b) => Math.max(a, b)) ?? 0;
+    return getPositionMaxX(position + 1); // Add one to account for gradient
+  });
+
+  const getInitialWidth = () => {
+    return Math.min(50, getMaxWidth());
+  };
 
   return (
-    <div style={{ overflow: "auto", height: "80vh" }} ref={scrollTargetElement}>
+    <>
       {commits() ? (
-        <VirtualContainer
-          items={commits()!}
-          scrollTarget={scrollTargetElement}
-          // Define size you wish your list items to take.
-          itemSize={{ height: ITEM_HEIGHT }}
-        >
-          {ListItem}
-        </VirtualContainer>
+        <Grid items={commits()!} itemSize={{ height: ITEM_HEIGHT }}>
+          <Column
+            width={getInitialWidth()}
+            minWidth={COMMIT_RADIUS * 2 + GRAPH_MARGIN * 2}
+            maxWidth={getMaxWidth()}
+          >
+            {GraphCell}
+          </Column>
+          <Column header="Commit">{CommitCell}</Column>
+        </Grid>
       ) : null}
-    </div>
+    </>
   );
 }
-
-const ListItem = (props: VirtualItemProps<PositionedCommit>) => (
-  <div
-    class={classes.commitRow}
-    // Required for items to switch places.
-    style={{ ...props.style }}
-    // Used for keyboard navigation and accessibility.
-    tabIndex={props.tabIndex}
-    role="listitem"
-  >
-    <CommitGraph positionedCommit={props.item} />
-    <div class={classes.commitSummary}>{props.item.commit.summary}</div>
-  </div>
-);
 
 const COLORS = [
   "rgb(100, 200, 50)",
@@ -80,28 +80,33 @@ const COLORS = [
 ];
 const getColor = (i: number) => COLORS[i % COLORS.length];
 
-const CommitGraph = (props: { positionedCommit: PositionedCommit }) => {
+const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
   let ref!: HTMLCanvasElement;
 
   createEffect(() => {
-    const position = props.positionedCommit.position;
+    const position = props.item.position;
     const ctx = ref.getContext("2d")!;
-    const width = ref.width;
+    const width = props.width ?? ref.width; // We need to call props.width to have this re-render when width changes.
 
     ctx.clearRect(0, 0, width, ref.height);
-    props.positionedCommit.paths.forEach((path) =>
-      drawPath(ctx, width, position, path)
-    );
-    drawCommit(ctx, width, props.positionedCommit);
+    props.item.paths.forEach((path) => drawPath(ctx, width, position, path));
+    drawGradient(ctx, width);
+    drawCommit(ctx, width, props.item);
   });
 
   return (
     <canvas
       height={ITEM_HEIGHT}
-      width={200}
+      width={props.width ?? 100}
       class={classes.commitGraph}
       ref={ref}
     />
+  );
+};
+
+const CommitCell = (props: CellRendererProps<PositionedCommit>) => {
+  return (
+    <div style={{ "white-space": "nowrap" }}>{props.item.commit.summary}</div>
   );
 };
 
@@ -112,11 +117,10 @@ function drawCommit(
 ) {
   ctx.beginPath();
   ctx.arc(
-    COMMIT_RADIUS +
-      Math.min(
-        positionedCommit.position * COMMIT_RADIUS * 2,
-        width - 2 * COMMIT_RADIUS
-      ),
+    Math.min(
+      getPositionX(positionedCommit.position),
+      width - COMMIT_RADIUS - GRAPH_MARGIN
+    ),
     ITEM_HEIGHT / 2,
     positionedCommit.commit.is_merge ? MERGE_RADIUS : COMMIT_RADIUS,
     0,
@@ -124,6 +128,15 @@ function drawCommit(
   );
   ctx.fillStyle = getColor(positionedCommit.color);
   ctx.fill();
+}
+
+function drawGradient(ctx: CanvasRenderingContext2D, width: number) {
+  const xStart = width - COMMIT_RADIUS * 3;
+  const grd = ctx.createLinearGradient(xStart, 0, width, 0);
+  grd.addColorStop(0, "#2f2f2f00");
+  grd.addColorStop(0.5, "#2f2f2fff");
+  ctx.fillStyle = grd;
+  ctx.fillRect(xStart, 0, width, ITEM_HEIGHT);
 }
 
 function drawPath(
@@ -148,14 +161,14 @@ function drawBase(
   commitPos: number,
   pos: number
 ) {
-  // if position.max(to) as f32 * RADIUS * 2.0 + RADIUS > available.x - RADIUS {
-  //     return;
-  // }
+  if (getPositionMaxX(Math.min(commitPos, pos)) > width) {
+    return;
+  }
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
   ctx.lineWidth = 1;
-  ctx.moveTo(COMMIT_RADIUS + commitPos * COMMIT_RADIUS * 2, ITEM_HEIGHT / 2);
-  ctx.lineTo(COMMIT_RADIUS + pos * COMMIT_RADIUS * 2, 0);
+  ctx.moveTo(getPositionX(commitPos), ITEM_HEIGHT / 2);
+  ctx.lineTo(getPositionX(pos), 0);
   ctx.stroke();
 }
 function drawFollow(
@@ -164,15 +177,15 @@ function drawFollow(
   color: number,
   pos: number
 ) {
-  // if position as f32 * RADIUS * 2.0 + RADIUS > available.x - RADIUS {
-  //     return;
-  // }
+  if (getPositionMaxX(pos) > width) {
+    return;
+  }
 
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
   ctx.lineWidth = 1;
-  ctx.moveTo(COMMIT_RADIUS + pos * COMMIT_RADIUS * 2, 0);
-  ctx.lineTo(COMMIT_RADIUS + pos * COMMIT_RADIUS * 2, ITEM_HEIGHT);
+  ctx.moveTo(getPositionX(pos), 0);
+  ctx.lineTo(getPositionX(pos), ITEM_HEIGHT);
   ctx.stroke();
 }
 function drawParent(
@@ -182,13 +195,20 @@ function drawParent(
   commitPos: number,
   pos: number
 ) {
-  // if position.max(to) as f32 * RADIUS * 2.0 + RADIUS > available.x - RADIUS {
-  //     return;
-  // }
+  if (getPositionMaxX(Math.min(commitPos, pos)) > width) {
+    return;
+  }
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
   ctx.lineWidth = 1;
-  ctx.moveTo(COMMIT_RADIUS + commitPos * COMMIT_RADIUS * 2, ITEM_HEIGHT / 2);
-  ctx.lineTo(COMMIT_RADIUS + pos * COMMIT_RADIUS * 2, ITEM_HEIGHT);
+  ctx.moveTo(getPositionX(commitPos), ITEM_HEIGHT / 2);
+  ctx.lineTo(getPositionX(pos), ITEM_HEIGHT);
   ctx.stroke();
+}
+
+function getPositionX(position: number) {
+  return GRAPH_MARGIN + COMMIT_RADIUS + position * COMMIT_RADIUS * 2;
+}
+function getPositionMaxX(position: number) {
+  return getPositionX(position) + COMMIT_RADIUS + GRAPH_MARGIN;
 }
