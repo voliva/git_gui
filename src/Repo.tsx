@@ -31,7 +31,7 @@ const commits$ = state(defer(() => invoke<PositionedCommit[]>("get_commits")));
 
 const ITEM_HEIGHT = 30;
 const COMMIT_RADIUS = 8;
-const MERGE_RADIUS = 6;
+const MERGE_RADIUS = 5;
 const GRAPH_MARGIN = 3;
 
 export function Repo() {
@@ -126,17 +126,17 @@ function drawCommit(
     0,
     2 * Math.PI
   );
-  ctx.fillStyle = getColor(positionedCommit.color);
+  ctx.fillStyle = `hsl(${positionedCommit.color}, 80%, 50%)`;
   ctx.fill();
 }
 
 function drawGradient(ctx: CanvasRenderingContext2D, width: number) {
   const xStart = width - COMMIT_RADIUS * 3;
-  const grd = ctx.createLinearGradient(xStart, 0, width, 0);
+  const grd = ctx.createLinearGradient(xStart, 0, width + 5, 0);
   grd.addColorStop(0, "#2f2f2f00");
-  grd.addColorStop(0.5, "#2f2f2fff");
+  grd.addColorStop(0.4, "#2f2f2fff");
   ctx.fillStyle = grd;
-  ctx.fillRect(xStart, 0, width, ITEM_HEIGHT);
+  ctx.fillRect(xStart, 0, width + 5, ITEM_HEIGHT);
 }
 
 function drawPath(

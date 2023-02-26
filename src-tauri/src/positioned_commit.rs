@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use derivative::Derivative;
 use git2::{Commit, Error, Oid, Repository, Signature};
@@ -74,9 +74,51 @@ pub fn get_positioned_commits(repo: &Repository) -> Vec<PositionedCommit> {
     return result;
 }
 
+fn get_author_colors(commits: &Vec<Commit>) -> HashMap<String, usize> {
+    let authors = commits
+        .iter()
+        .map(|commit| {
+            commit
+                .author()
+                .name()
+                .map(|x| String::from(x))
+                .unwrap_or(String::new())
+        })
+        .unique()
+        .sorted()
+        .collect_vec();
+
+    let length = authors.len();
+    if length == 0 {
+        return HashMap::new();
+    }
+
+    /*
+     * We want a colour assignment so that:
+     * 1. Doesn't depend on the commit order
+     * 2. Adding new authors shouldn't shift the colours (as much as posible)
+     * 3. Two authors shouldn't have similar colours (as much as posible) (even if they have similar name)
+     *
+     * I'm thinking 2 ways, which compromise [2] and [3] :'D
+     * 1. A function name -> colour would not shift [2], but it could happen that in a repo with 2 names both would have very similar colours.
+     * 2. Split the colour wheel into as many authors as there are, assign by index. But when adding new authors they will shift colours around.
+     *
+     * I'm going with [2]
+     *
+     * TODO on repos where there's a large number of small contributors, keep the big contributors as separate as posible.
+     */
+    let degree_distance = (360 / length).max(1);
+    return authors
+        .into_iter()
+        .enumerate()
+        .map(|(i, author)| (author, degree_distance * i))
+        .collect();
+}
+
 fn position_commits(commits: Vec<Commit>) -> Vec<PositionedCommit> {
     let mut result = vec![];
     let mut branches: Vec<Option<(Oid, usize)>> = vec![];
+    let author_colors = get_author_colors(&commits);
 
     for commit in commits {
         // Step 1. set position and color of the commit + top paths (BranchPath::Base)
@@ -202,7 +244,10 @@ fn position_commits(commits: Vec<Commit>) -> Vec<PositionedCommit> {
 
         result.push(PositionedCommit {
             commit: CommitInfo::new(&commit),
-            color,
+            color: author_colors
+                .get(commit.author().name().unwrap_or(""))
+                .unwrap()
+                .to_owned(),
             position,
             paths,
         });
