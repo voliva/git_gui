@@ -1,6 +1,5 @@
 import { Show } from "solid-js";
-import { Repo } from "./Repo";
-import { openRepo, repo$ } from "./repoState";
+import { Repo, openRepo, repo$ } from "./Repo";
 import { readState } from "./rxState";
 
 function App() {

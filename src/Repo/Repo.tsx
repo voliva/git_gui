@@ -1,11 +1,10 @@
-import { VirtualItemProps } from "@minht11/solid-virtual-container";
 import { state } from "@react-rxjs/core";
 import { invoke } from "@tauri-apps/api";
 import { defer } from "rxjs";
 import { createEffect, createMemo } from "solid-js";
-import { CellRendererProps, Column, Grid } from "./Grid";
+import { CellRendererProps, Column, Grid } from "../components/Grid";
 import classes from "./Repo.module.css";
-import { readState } from "./rxState";
+import { readState } from "../rxState";
 
 interface CommitInfo {
   id: string;
@@ -49,7 +48,7 @@ export function Repo() {
   });
 
   const getInitialWidth = () => {
-    return Math.min(50, getMaxWidth());
+    return Math.min(getPositionX(3), getMaxWidth());
   };
 
   return (
@@ -70,15 +69,10 @@ export function Repo() {
   );
 }
 
-const COLORS = [
-  "rgb(100, 200, 50)",
-  "rgb(200, 100, 50)",
-  "rgb(100, 50, 200)",
-  "rgb(50, 200, 100)",
-  "rgb(200, 50, 100)",
-  "rgb(50, 100, 200)",
-];
-const getColor = (i: number) => COLORS[i % COLORS.length];
+// 200 because I want to start on blueish
+// 137.50776 because it's the most irrational turn, meaning it will go around and around repeating as least as posible
+// Derived from phi (227.5º -> 137.5º), maths in https://r-knott.surrey.ac.uk/Fibonacci/fibnat2.html
+const getColor = (i: number) => `hsl(${200 + i * 137.50776}, 100%, 75%)`;
 
 const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
   let ref!: HTMLCanvasElement;
@@ -126,7 +120,7 @@ function drawCommit(
     0,
     2 * Math.PI
   );
-  ctx.fillStyle = `hsl(${positionedCommit.color}, 80%, 50%)`;
+  ctx.fillStyle = `hsl(${positionedCommit.color}, 100%, 60%)`;
   ctx.fill();
 }
 
