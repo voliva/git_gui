@@ -106,12 +106,32 @@ fn get_author_colors(commits: &Vec<Commit>) -> HashMap<String, usize> {
      * I'm going with [2]
      *
      * TODO on repos where there's a large number of small contributors, keep the big contributors as separate as posible.
+     * ---> After giving some thought, I think it's not posible to do it, specially if we want to keep the constraint of not moving colours too much.
+     * Ideas I had:
+     * 1. Sort authors in a way that it's guaranteed importants they are the most far apart
+     *  After sorting by number of commits, take the best and put it on the first position.
+     *  Then shift the positions of the subtriangle so that the best of that subtriangle is in the middle
+     *  Then keep aplying the same "shift subtriangle so that the best is in the middle" for the new subtriangles
+     *
+     *      .:    :    .    :  .      :  .
+     *    .::: => :  .:: => : ::.  => :: : . (or it was already done)
+     *  .:::::    :.::::    :::::.    ::::.:
+     *             |--|      || ||
+     *
+     *  problem is that someone adding a new commit can cause it to swap color to a completely different one.
+     *
+     * 2. Magnetism: After putting the authors in alphabetical order, make some sort of "magnetic push" so that the ones with big weighs push away from each other.
+     *    I'm not sure how to make it work, specially weights on different stuff. Also, how does one author overtake the other if the distance becomes 0?
+     * 3. Keep top # contributors further apart: Find the top contributor and the second contributor. Put the second contributor at a distance that's far away from the first one.
+     *    Maybe similar for third and fourth contributors?
+     *   => Has the same problem as [1]. If the second contributer commits and becomes the top contributor, it will shift colours around.
+     * the best idea I had
      */
-    let degree_distance = (360 / length).max(1);
+    let degree_distance = 360.0 / length as f32;
     return authors
         .into_iter()
         .enumerate()
-        .map(|(i, author)| (author, degree_distance * i))
+        .map(|(i, author)| (author, (degree_distance * i as f32) as usize))
         .collect();
 }
 

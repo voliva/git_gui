@@ -3,12 +3,13 @@ import {
   VirtualItemProps,
   VirtualItemSize,
 } from "@minht11/solid-virtual-container";
-import { children, createSignal, For, JSXElement, Show } from "solid-js";
 import { ReactiveWeakMap } from "@solid-primitives/map";
+import { children, For, JSXElement, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import classes from "./Grid.module.css";
 
 export const Grid = <T extends any>(props: {
+  class?: string;
   items: T[];
   itemSize: VirtualItemSize;
   children: any;
@@ -99,7 +100,13 @@ export const Grid = <T extends any>(props: {
 
   let scrollTargetElement!: HTMLDivElement;
   return (
-    <div class={classes.gridContainer} ref={scrollTargetElement}>
+    <div
+      classList={{
+        [classes.gridContainer]: true,
+        [props.class || ""]: Boolean(props.class),
+      }}
+      ref={scrollTargetElement}
+    >
       <div class={classes.headerContainer}>{getHeaders()}</div>
       <VirtualContainer
         className={classes.virtualContainer}

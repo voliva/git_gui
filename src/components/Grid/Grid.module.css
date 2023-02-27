@@ -1,8 +1,15 @@
 .gridContainer {
   overflow: auto;
   user-select: none;
+  -webkit-user-select: none;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 
   --default-grid-bg: var(--app-background);
+}
+
+.gridContainer::-webkit-scrollbar {
+  display: none;
 }
 
 .headerContainer {
@@ -25,12 +32,14 @@
 
 .cellAuto {
   flex: 1 1 1%;
+  width: 0px; /* Allows for flex items to not overflow without having overflow: hidden */
   display: flex;
   position: relative;
   align-items: center;
 }
 .cellFixed {
   flex: 0 0 1%;
+  width: 0px;
   display: flex;
   position: relative;
   align-items: center;

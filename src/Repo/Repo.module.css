@@ -1,12 +1,11 @@
-.commitRow {
-  width: 100%;
+.repoContainer {
   display: flex;
-  text-align: left;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.commitGraph {
-  flex: 0 0 100%;
-}
-.commitSummary {
+.repoContent {
   flex: 1 1 auto;
+  display: flex;
+  overflow: hidden;
 }
