@@ -6,7 +6,8 @@
 mod positioned_commit;
 mod timer;
 
-use git2::Repository;
+use git2::{Remote, Repository};
+use itertools::Itertools;
 use positioned_commit::{get_positioned_commits, PositionedCommit};
 use serde::Serialize;
 use std::fs;
@@ -105,6 +106,24 @@ fn get_commits(
         .ok_or(GetCommitsError::NotOpen)
 }
 
+#[tauri::command(async)]
+fn fetch(state: tauri::State<'_, AppState>, app: tauri::AppHandle) -> Result<(), GetCommitsError> {
+    let mutex_repo = state.repository.lock()?;
+
+    if let Ok(repo) = mutex_repo.as_ref() {
+        get_remotes(repo)
+            .into_iter()
+            .for_each(|repo| repo.fetch(refspecs, opts, reflog_msg))
+    }
+
+    let r = mutex_repo
+        .as_ref()
+        .map(|(repo, _)| get_remotes(repo))
+        .ok_or(GetCommitsError::NotOpen);
+    Ok(())
+}
+// https://github.com/rust-lang/git2-rs/blob/master/examples/fetch.rs3
+
 fn main() {
     let app = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -162,4 +181,19 @@ fn set_settings_opened_repo(app: &tauri::AppHandle, repo: &str) {
                 ()
             }
         });
+}
+
+fn get_remotes(repo: &Repository) -> Vec<Remote> {
+    let remote_names = repo
+        .remotes()
+        .iter()
+        .flat_map(|v| v)
+        .filter_map(|v| v)
+        .map(|v| v.to_owned())
+        .collect_vec();
+
+    remote_names
+        .into_iter()
+        .map(|name| repo.find_remote(&name).unwrap())
+        .collect_vec()
 }
