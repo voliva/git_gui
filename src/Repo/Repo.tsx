@@ -1,15 +1,15 @@
 import { DetailPanel } from "./DetailPanel";
 import { ObjectsPanel } from "./ObjectsPanel";
+import { container, content } from "./Repo.css";
 import { RepoGrid } from "./RepoGrid";
 import { RepoHeader } from "./RepoHeader";
-import classes from "./Repo.module.css";
 
 export function Repo() {
   return (
-    <div class={classes.repoContainer}>
+    <div class={container}>
       <RepoHeader />
 
-      <div class={classes.repoContent}>
+      <div class={content}>
         <ObjectsPanel />
         <RepoGrid />
         <DetailPanel />

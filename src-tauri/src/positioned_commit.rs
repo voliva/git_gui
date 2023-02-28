@@ -116,7 +116,7 @@ fn get_author_colors(commits: &Vec<Commit>) -> HashMap<String, usize> {
      *      .:    :    .    :  .      :  .
      *    .::: => :  .:: => : ::.  => :: : . (or it was already done)
      *  .:::::    :.::::    :::::.    ::::.:
-     *             |--|      || ||
+     *             |---|     || ||
      *
      *  problem is that someone adding a new commit can cause it to swap color to a completely different one.
      *

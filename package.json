@@ -13,6 +13,7 @@
   "devDependencies": {
     "@tauri-apps/cli": "^1.2.2",
     "@types/node": "^18.7.10",
+    "@vanilla-extract/vite-plugin": "^3.8.0",
     "typescript": "^4.7.4",
     "vite": "^4.0.0",
     "vite-plugin-solid": "^2.3.0"
@@ -23,6 +24,7 @@
     "@react-rxjs/utils": "^0.9.5",
     "@solid-primitives/map": "^0.4.0",
     "@tauri-apps/api": "^1.2.0",
+    "@vanilla-extract/css": "^1.9.5",
     "rxjs": "^7.8.0",
     "solid-js": "^1.4.7"
   }

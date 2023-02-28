@@ -1,7 +1,7 @@
 import { CellRendererProps, Column, Grid } from "@/components/Grid";
 import { readState } from "@/rxState";
 import { createEffect, createMemo } from "solid-js";
-import classes from "./RepoGrid.module.css";
+import * as classes from "./RepoGrid.css";
 import { BranchPath, commits$, PositionedCommit } from "./repoState";
 
 const ITEM_HEIGHT = 30;

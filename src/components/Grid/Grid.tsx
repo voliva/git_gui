@@ -6,7 +6,7 @@ import {
 import { ReactiveWeakMap } from "@solid-primitives/map";
 import { children, For, JSXElement, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import classes from "./Grid.module.css";
+import * as classes from "./Grid.css";
 
 export const Grid = <T extends any>(props: {
   class?: string;
