@@ -1,4 +1,8 @@
-import { style } from "@vanilla-extract/css";
+import { appBackground } from "@/style.css";
+import { createVar, fallbackVar, style } from "@vanilla-extract/css";
+
+export const gridBg = createVar();
+const safeGridBg = fallbackVar(gridBg, appBackground);
 
 export const gridContainer = style({
   overflow: "auto",
@@ -6,9 +10,6 @@ export const gridContainer = style({
   WebkitUserSelect: "none",
   msOverflowStyle: "none",
   scrollbarWidth: "none",
-  vars: {
-    "--default-grid-bg": "var(--app-background)",
-  },
   "::-webkit-scrollbar": {
     display: "none",
   },
@@ -18,7 +19,7 @@ export const headerContainer = style({
   position: "sticky",
   top: 0,
   display: "flex",
-  backgroundColor: "var(--grid-bg, var(--default-grid-bg))",
+  backgroundColor: safeGridBg,
   zIndex: 1, // Above virtualContainer
   boxShadow: "0px 1px 5px var(--grid-bg, var(--default-grid-bg))",
 });
@@ -30,7 +31,7 @@ export const virtualContainer = style({
 export const itemContainer = style({
   width: "100%",
   display: "flex",
-  backgroundColor: "var(--grid-bg, var(--default-grid-bg))",
+  backgroundColor: safeGridBg,
 });
 
 export const cellAuto = style({
