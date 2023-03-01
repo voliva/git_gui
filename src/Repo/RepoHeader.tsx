@@ -1,3 +1,9 @@
+import { invoke } from "@tauri-apps/api";
+
 export const RepoHeader = () => {
-  return <div>Header</div>;
+  return (
+    <div>
+      Header <button onClick={() => invoke("fetch")}>Fetch</button>
+    </div>
+  );
 };
