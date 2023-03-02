@@ -14,7 +14,7 @@ use settings::get_settings_opened_repo;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Mutex;
-use tauri::Manager;
+use tauri::{CustomMenuItem, Manager, Menu, Submenu};
 
 pub struct AppState {
     repository: Mutex<Option<(Repository, String)>>,
@@ -27,6 +27,26 @@ fn main() {
             get_repo_name,
             get_commits
         ])
+        .menu(
+            Menu::new().add_submenu(Submenu::new(
+                "File",
+                Menu::new()
+                    .add_item(CustomMenuItem::new("open".to_string(), "Open"))
+                    .add_item(CustomMenuItem::new("close".to_string(), "Close")),
+            )),
+        )
+        .on_menu_event(|event| match event.menu_item_id() {
+            "open" => {
+                let app_handle = event.window().app_handle();
+                let state = app_handle.state();
+                let app_handle = event.window().app_handle();
+                open_repo(state, app_handle).ok();
+            }
+            "close" => {
+                std::process::exit(0);
+            }
+            _ => {}
+        })
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
 

@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+};
 
 use derivative::Derivative;
 use git2::{Commit, Error, Oid, Repository, Signature};
@@ -63,7 +66,18 @@ pub fn get_positioned_commits(repo: &Repository) -> Vec<PositionedCommit> {
     let commits = commit_oids
         .iter()
         .filter_map(|oid| repo.find_commit(*oid).ok())
-        .sorted_by(|a, b| b.time().cmp(&a.time()))
+        .sorted_by(|a, b| {
+            let res = b.time().cmp(&a.time());
+            if res != Ordering::Equal {
+                return res;
+            }
+            if a.parent_ids().contains(&b.id()) {
+                return Ordering::Less;
+            } else if b.parent_ids().contains(&a.id()) {
+                return Ordering::Greater;
+            }
+            return Ordering::Equal;
+        })
         .map(|c| c.to_owned())
         .collect_vec();
     println!("Sort commits {}", timer.lap());
@@ -80,7 +94,7 @@ fn get_author_colors(commits: &Vec<Commit>) -> HashMap<String, usize> {
         .map(|commit| {
             commit
                 .author()
-                .name()
+                .email()
                 .map(|x| String::from(x))
                 .unwrap_or(String::new())
         })
@@ -265,7 +279,7 @@ fn position_commits(commits: Vec<Commit>) -> Vec<PositionedCommit> {
         result.push(PositionedCommit {
             commit: CommitInfo::new(&commit),
             color: author_colors
-                .get(commit.author().name().unwrap_or(""))
+                .get(commit.author().email().unwrap_or(""))
                 .unwrap()
                 .to_owned(),
             position,
@@ -290,11 +304,17 @@ fn get_avilable_color(branches: &Vec<Option<(Oid, usize)>>) -> usize {
 }
 
 fn get_commit_oids(repo: &Repository) -> Result<Vec<Oid>, Error> {
+    // let refs = repo.references().unwrap();
+    // for reference in refs {
+    //     println!("Ref: {:?}", reference.unwrap().name());
+    // }
+
     let mut result = vec![];
 
     let mut walker = repo.revwalk()?;
     // Use "refs/heads" if you only want to get commits held by branches
     walker.push_glob("refs/heads")?;
+    walker.push_glob("refs/remotes")?;
     walker.for_each(|c| {
         if let Ok(oid) = c {
             result.push(oid);
