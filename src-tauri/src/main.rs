@@ -6,25 +6,17 @@
 mod commands;
 mod positioned_commit;
 mod settings;
-mod timer;
 
-use crate::commands::{get_commits, get_repo_name, open_repo};
-use git2::Repository;
-use settings::get_settings_opened_repo;
-use std::path::PathBuf;
-use std::str::FromStr;
-use std::sync::Mutex;
+use crate::commands::{get_commits, get_last_repo, open_repo};
 use tauri::{CustomMenuItem, Manager, Menu, Submenu};
 
-pub struct AppState {
-    repository: Mutex<Option<(Repository, String)>>,
-}
+pub struct AppState {}
 
 fn main() {
     let app = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             open_repo,
-            get_repo_name,
+            get_last_repo,
             get_commits
         ])
         .menu(
@@ -37,10 +29,13 @@ fn main() {
         )
         .on_menu_event(|event| match event.menu_item_id() {
             "open" => {
-                let app_handle = event.window().app_handle();
-                let state = app_handle.state();
-                let app_handle = event.window().app_handle();
-                open_repo(state, app_handle).ok();
+                if let Ok(path) = open_repo(event.window().app_handle()) {
+                    event
+                        .window()
+                        .app_handle()
+                        .emit_all("repo_change", path)
+                        .ok();
+                }
             }
             "close" => {
                 std::process::exit(0);
@@ -49,22 +44,6 @@ fn main() {
         })
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
-
-    let repository = get_settings_opened_repo(&app).and_then(|path| {
-        Repository::open(&path).ok().map(|repo| {
-            let path = PathBuf::from_str(&path).unwrap();
-            let name = path
-                .file_name()
-                .map(|v| v.to_str().unwrap_or(""))
-                .unwrap_or("")
-                .to_owned();
-            (repo, name)
-        })
-    });
-
-    app.manage(AppState {
-        repository: Mutex::new(repository),
-    });
 
     app.run(|_, _| {});
 }

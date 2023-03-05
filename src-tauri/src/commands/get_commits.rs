@@ -1,30 +1,29 @@
-use crate::{
-    positioned_commit::{get_positioned_commits, PositionedCommit},
-    AppState,
-};
+use crate::positioned_commit::{get_positioned_commits, PositionedCommit};
+use git2::Repository;
+use itertools::Itertools;
 use serde::Serialize;
-use std::sync::PoisonError;
 
 #[derive(Serialize)]
 pub enum GetCommitsError {
-    NotOpen,
-    ConcurrentError,
+    Read(String),
 }
 
-impl<T> From<PoisonError<T>> for GetCommitsError {
-    fn from(_: PoisonError<T>) -> Self {
-        GetCommitsError::ConcurrentError
+impl From<git2::Error> for GetCommitsError {
+    fn from(value: git2::Error) -> Self {
+        GetCommitsError::Read(value.message().to_owned())
     }
 }
 
 #[tauri::command]
 pub fn get_commits(
-    state: tauri::State<'_, AppState>,
+    path: String,
+    amount: Option<usize>,
 ) -> Result<Vec<PositionedCommit>, GetCommitsError> {
-    let mutex_repo = state.repository.lock()?;
+    let repo = Repository::open(path)?;
 
-    mutex_repo
-        .as_ref()
-        .map(|(repo, _)| get_positioned_commits(repo))
-        .ok_or(GetCommitsError::NotOpen)
+    let result = get_positioned_commits(&repo)
+        .take(amount.unwrap_or(usize::MAX))
+        .collect_vec();
+
+    Ok(result)
 }

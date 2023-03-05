@@ -1,2 +1,2 @@
-export { Repo } from './Repo';
-export { openRepo, repo$ } from "./repoState";
+export { Repo } from "./Repo";
+export { openRepo, repo_path$ } from "./repoState";

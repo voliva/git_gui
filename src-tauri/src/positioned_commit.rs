@@ -1,11 +1,8 @@
-use std::collections::{HashMap, HashSet};
-
 use derivative::Derivative;
 use git2::{Commit, Error, Oid, Repository, Revwalk, Signature, Sort};
 use itertools::Itertools;
 use serde::Serialize;
-
-use crate::timer::Timer;
+use std::collections::HashSet;
 
 #[derive(Derivative, Serialize)]
 #[derivative(Debug)]
@@ -50,23 +47,20 @@ pub enum BranchPath {
 pub struct PositionedCommit {
     pub commit: CommitInfo,
     pub position: usize,
-    pub color: usize,
     pub paths: Vec<(BranchPath, usize)>, // (path, color)
 }
 
-struct CommitPositioner<I>
+struct CommitPositioner<'a, I>
 where
-    I: Iterator,
-    I::Item: CommitInfoAccessor,
+    I: Iterator<Item = Commit<'a>>,
 {
     branches: Vec<Option<(Oid, usize)>>,
     underlying: I,
 }
 
-trait PositionCommit: Iterator {
-    fn position_commit(self) -> CommitPositioner<Self>
+trait PositionCommit<'a>: Iterator<Item = Commit<'a>> {
+    fn position_commit(self) -> CommitPositioner<'a, Self>
     where
-        Self::Item: CommitInfoAccessor,
         Self: Sized,
     {
         CommitPositioner {
@@ -76,22 +70,11 @@ trait PositionCommit: Iterator {
     }
 }
 
-trait CommitInfoAccessor {
-    fn id(&self) -> Oid;
-}
+impl<'a, I: Iterator<Item = Commit<'a>>> PositionCommit<'a> for I {}
 
-impl<'a> CommitInfoAccessor for Commit<'a> {
-    fn id(&self) -> Oid {
-        self.id()
-    }
-}
-
-impl<I: Iterator> PositionCommit for I {}
-
-impl<I> Iterator for CommitPositioner<I>
+impl<'a, I> Iterator for CommitPositioner<'a, I>
 where
-    I: Iterator,
-    I::Item: CommitInfoAccessor,
+    I: Iterator<Item = Commit<'a>>,
 {
     type Item = PositionedCommit;
 
@@ -231,91 +214,19 @@ where
 
         Some(PositionedCommit {
             commit: CommitInfo::new(&commit),
-            color: author_colors
-                .get(commit.author().email().unwrap_or(""))
-                .unwrap()
-                .to_owned(),
             position,
             paths,
-        });
+        })
     }
 }
 
-pub fn get_positioned_commits(repo: &Repository) -> Vec<PositionedCommit> {
-    let mut timer = Timer::new();
-
-    let commits = get_revwalk(&repo)
+pub fn get_positioned_commits<'a>(
+    repo: &'a Repository,
+) -> impl Iterator<Item = PositionedCommit> + 'a {
+    get_revwalk(&repo)
         .unwrap()
         .filter_map(|oid| oid.ok().and_then(|oid| repo.find_commit(oid).ok()))
         .position_commit()
-        .collect_vec();
-    println!("Sort commits {}", timer.lap());
-
-    // let result = position_commits(commits);
-    println!("Position commits {}", timer.lap());
-
-    return commits;
-}
-
-fn get_author_color(commit: &Vec<Commit>) -> HashMap<String, usize> {
-    let authors = commits
-        .iter()
-        .map(|commit| {
-            commit
-                .author()
-                .email()
-                .map(|x| String::from(x))
-                .unwrap_or(String::new())
-        })
-        .unique()
-        .sorted()
-        .collect_vec();
-
-    let length = authors.len();
-    if length == 0 {
-        return HashMap::new();
-    }
-
-    /*
-     * We want a colour assignment so that:
-     * 1. Doesn't depend on the commit order
-     * 2. Adding new authors shouldn't shift the colours (as much as posible)
-     * 3. Two authors shouldn't have similar colours (as much as posible) (even if they have similar name)
-     *
-     * I'm thinking 2 ways, which compromise [2] and [3] :'D
-     * 1. A function name -> colour would not shift [2], but it could happen that in a repo with 2 names both would have very similar colours.
-     * 2. Split the colour wheel into as many authors as there are, assign by index. But when adding new authors they will shift colours around.
-     *
-     * I'm going with [2]
-     *
-     * TODO on repos where there's a large number of small contributors, keep the big contributors as separate as posible.
-     * ---> After giving some thought, I think it's not posible to do it, specially if we want to keep the constraint of not moving colours too much.
-     * Ideas I had:
-     * 1. Sort authors in a way that it's guaranteed importants they are the most far apart
-     *  After sorting by number of commits, take the best and put it on the first position.
-     *  Then shift the positions of the subtriangle so that the best of that subtriangle is in the middle
-     *  Then keep aplying the same "shift subtriangle so that the best is in the middle" for the new subtriangles
-     *
-     *      .:    :    .    :  .      :  .
-     *    .::: => :  .:: => : ::.  => :: : . (or it was already done)
-     *  .:::::    :.::::    :::::.    ::::.:
-     *             |---|     || ||
-     *
-     *  problem is that someone adding a new commit can cause it to swap color to a completely different one.
-     *
-     * 2. Magnetism: After putting the authors in alphabetical order, make some sort of "magnetic push" so that the ones with big weighs push away from each other.
-     *    I'm not sure how to make it work, specially weights on different stuff. Also, how does one author overtake the other if the distance becomes 0?
-     * 3. Keep top # contributors further apart: Find the top contributor and the second contributor. Put the second contributor at a distance that's far away from the first one.
-     *    Maybe similar for third and fourth contributors?
-     *   => Has the same problem as [1]. If the second contributer commits and becomes the top contributor, it will shift colours around.
-     * the best idea I had
-     */
-    let degree_distance = 360.0 / length as f32;
-    return authors
-        .into_iter()
-        .enumerate()
-        .map(|(i, author)| (author, (degree_distance * i as f32) as usize))
-        .collect();
 }
 
 fn get_avilable_color(branches: &Vec<Option<(Oid, usize)>>) -> usize {

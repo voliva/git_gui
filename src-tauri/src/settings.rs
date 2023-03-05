@@ -1,7 +1,7 @@
 use std::fs;
-use tauri::{api::path, App};
+use tauri::api::path;
 
-pub fn get_settings_opened_repo(app: &App) -> Option<String> {
+pub fn get_settings_opened_repo(app: &tauri::AppHandle) -> Option<String> {
     path::app_local_data_dir(&app.config())
         .map(|path| path.join("openrepo"))
         .and_then(|path| match fs::read_to_string(path) {

@@ -1,9 +1,9 @@
 import { readState } from "@/rxState";
 import { Show } from "solid-js";
-import { openRepo, Repo, repo$ } from "./Repo";
+import { openRepo, Repo, repo_path$ } from "./Repo";
 
 function App() {
-  const repo = readState(repo$);
+  const repo = readState(repo_path$);
 
   return (
     <Show
