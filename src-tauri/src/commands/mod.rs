@@ -1,7 +1,7 @@
 mod get_commits;
-mod get_repo_name;
+mod get_last_repo;
 mod open_repo;
 
 pub use get_commits::*;
-pub use get_repo_name::*;
+pub use get_last_repo::*;
 pub use open_repo::*;

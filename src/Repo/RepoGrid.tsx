@@ -6,6 +6,7 @@ import { BranchPath, commits$, PositionedCommit } from "./repoState";
 
 const ITEM_HEIGHT = 30;
 const COMMIT_RADIUS = 8;
+const COMMIT_BORDER = 2; // Extra around the gravatar
 const MERGE_RADIUS = 5;
 const GRAPH_MARGIN = 3;
 
@@ -82,24 +83,74 @@ const CommitCell = (props: CellRendererProps<PositionedCommit>) => {
   return <div class={classes.commitCell}>{props.item.commit.summary}</div>;
 };
 
-function drawCommit(
+const gravatarImages = new Map<
+  string,
+  Promise<HTMLImageElement> | HTMLImageElement
+>();
+const getGravatarImage = (hash: string) => {
+  if (gravatarImages.has(hash)) {
+    return gravatarImages.get(hash)!;
+  }
+  const promise = new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.addEventListener(
+      "load",
+      () => {
+        gravatarImages.set(hash, img);
+        resolve(img);
+      },
+      { once: true }
+    );
+    img.addEventListener("error", (e) => reject(e), { once: true });
+    img.src = `https://www.gravatar.com/avatar/${hash}?s=${
+      COMMIT_RADIUS * 2
+    }&d=identicon`;
+  });
+  // Depending on runtime and cache maybe this can happen?
+  if (gravatarImages.has(hash)) {
+    return gravatarImages.get(hash)!;
+  }
+  gravatarImages.set(hash, promise);
+  return promise;
+};
+function getAuthorColor(author: string) {
+  return 0;
+}
+
+async function drawCommit(
   ctx: CanvasRenderingContext2D,
   width: number,
   positionedCommit: PositionedCommit
 ) {
   ctx.beginPath();
+  const centerX = Math.min(
+    getPositionX(positionedCommit.position),
+    width - COMMIT_RADIUS - GRAPH_MARGIN
+  );
+  const centerY = ITEM_HEIGHT / 2;
+  const color = getAuthorColor("9b686497e6bc4e1e495b2ff4cfc15b59");
   ctx.arc(
-    Math.min(
-      getPositionX(positionedCommit.position),
-      width - COMMIT_RADIUS - GRAPH_MARGIN
-    ),
-    ITEM_HEIGHT / 2,
-    positionedCommit.commit.is_merge ? MERGE_RADIUS : COMMIT_RADIUS,
+    centerX,
+    centerY,
+    positionedCommit.commit.is_merge
+      ? MERGE_RADIUS
+      : COMMIT_RADIUS + COMMIT_BORDER,
     0,
     2 * Math.PI
   );
-  ctx.fillStyle = `hsl(${positionedCommit.color}, 100%, 60%)`;
+  ctx.fillStyle = `hsl(${color}, 100%, 60%)`;
   ctx.fill();
+
+  if (!positionedCommit.commit.is_merge) {
+    const imgOrPromise = getGravatarImage("9b686497e6bc4e1e495b2ff4cfc15b59");
+    const img = "then" in imgOrPromise ? await imgOrPromise : imgOrPromise;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, COMMIT_RADIUS, 0, 2 * Math.PI);
+    ctx.clip();
+    ctx.drawImage(img, centerX - COMMIT_RADIUS, centerY - COMMIT_RADIUS);
+    ctx.restore();
+  }
 }
 
 function drawGradient(ctx: CanvasRenderingContext2D, width: number) {
