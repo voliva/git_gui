@@ -72,7 +72,7 @@ const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
     ctx.clearRect(0, 0, width, ref.height);
     props.item.paths.forEach((path) => drawPath(ctx, width, position, path));
     drawGradient(ctx, width);
-    drawCommit(ctx, width, props.item);
+    drawCommit(ctx, width, () => props.item);
   });
 
   return (
@@ -133,8 +133,9 @@ function getAuthorColor(hash: string) {
 async function drawCommit(
   ctx: CanvasRenderingContext2D,
   width: number,
-  positionedCommit: PositionedCommit
+  positionedCommitGetter: () => PositionedCommit
 ) {
+  const positionedCommit = positionedCommitGetter();
   ctx.beginPath();
   const centerX = Math.min(
     getPositionX(positionedCommit.position),
@@ -158,6 +159,11 @@ async function drawCommit(
   if (!positionedCommit.commit.is_merge) {
     const imgOrPromise = getGravatarImage(hash);
     const img = "then" in imgOrPromise ? await imgOrPromise : imgOrPromise;
+    if (positionedCommit !== positionedCommitGetter()) {
+      // The component updated with another commit while we were waiting the image to load
+      // If we continue, we would be drawing an old image on a new version of the canvas.
+      return;
+    }
     ctx.save();
     ctx.beginPath();
     ctx.arc(centerX, centerY, COMMIT_RADIUS, 0, 2 * Math.PI);
