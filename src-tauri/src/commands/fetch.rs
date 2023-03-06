@@ -1,28 +1,14 @@
 use std::env;
 
-use crate::AppState;
 use git2::{
     AutotagOption, Cred, CredentialType, FetchOptions, Remote, RemoteCallbacks, Repository,
 };
 use itertools::Itertools;
 
 #[tauri::command(async)]
-pub fn fetch(state: tauri::State<'_, AppState>) -> Result<(), ()> {
-    // Fetch is an operation that takes long, since it fetches from all origin and all branches.
-    // Instead of keeping the AppState locked forever, we just grab the path and create a new Repo object.
-    // Move the sync problem to git2 trololo
-    let path = state
-        .repository
-        .lock()
-        .ok()
-        .and_then(|mutex_repo| {
-            return mutex_repo.as_ref().map(|(_, path)| path.clone());
-        })
-        .unwrap();
-
-    let repo_to_fetch = Repository::open(path).unwrap();
-
-    let remotes = get_remotes(&repo_to_fetch);
+pub fn fetch(path: String) -> Result<(), ()> {
+    let repo = Repository::open(path).unwrap();
+    let remotes = get_remotes(&repo);
 
     let results = remotes
         .into_iter()
