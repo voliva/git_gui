@@ -2,7 +2,7 @@ import { listen$ } from "@/tauriRx";
 import { state } from "@react-rxjs/core";
 import { createSignal } from "@react-rxjs/utils";
 import { invoke } from "@tauri-apps/api";
-import { concat, defer, filter, from, map, merge, switchMap } from "rxjs";
+import { concat, defer, filter, from, map, merge, switchMap, take } from "rxjs";
 
 export const [triggerOpen$, openRepo] = createSignal();
 export const repo_path$ = state(
@@ -60,3 +60,12 @@ export const commits$ = repo_path$.pipeState(
     })
   )
 );
+
+repo_path$
+  .pipe(
+    filter((v) => !!v),
+    take(1)
+  )
+  .subscribe((path) => {
+    invoke("watch_repo", { path });
+  });

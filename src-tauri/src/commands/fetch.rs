@@ -80,7 +80,7 @@ pub fn fetch(path: String) -> Result<(), ()> {
             Ok(())
         })
         .collect_vec();
-    println!("{:?}", results);
+    println!("fetch result {:?}", results);
 
     Ok(())
 }

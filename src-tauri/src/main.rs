@@ -8,7 +8,7 @@ mod positioned_commit;
 mod settings;
 mod timer;
 
-use crate::commands::{fetch, get_commits, get_last_repo, open_repo};
+use crate::commands::{fetch, get_commits, get_last_repo, open_repo, watch_repo};
 use tauri::{CustomMenuItem, Manager, Menu, Submenu};
 
 pub struct AppState {}
@@ -19,7 +19,8 @@ fn main() {
             open_repo,
             get_last_repo,
             get_commits,
-            fetch
+            fetch,
+            watch_repo
         ])
         .menu(
             Menu::new().add_submenu(Submenu::new(
