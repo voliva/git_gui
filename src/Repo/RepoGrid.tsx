@@ -5,8 +5,8 @@ import * as classes from "./RepoGrid.css";
 import { BranchPath, commits$, PositionedCommit } from "./repoState";
 
 const ITEM_HEIGHT = 30;
-const COMMIT_RADIUS = 8;
-const COMMIT_BORDER = 2; // Extra around the gravatar
+const COMMIT_RADIUS = 10;
+const COMMIT_BORDER = 1; // Extra around the gravatar
 const MERGE_RADIUS = 5;
 const GRAPH_MARGIN = 3;
 
@@ -113,8 +113,15 @@ const getGravatarImage = (hash: string) => {
   gravatarImages.set(hash, promise);
   return promise;
 };
-function getAuthorColor(author: string) {
-  return 0;
+
+const MAGIC_NUMBER = 137.50776;
+const NO_ONE = "no_one";
+function getAuthorColor(hash: string) {
+  const turns = Number.parseInt(hash.slice(0, 5), 16) % 360;
+  if (Number.isNaN(turns)) {
+    return 0;
+  }
+  return Math.round(MAGIC_NUMBER * turns) % 360;
 }
 
 async function drawCommit(
@@ -128,7 +135,8 @@ async function drawCommit(
     width - COMMIT_RADIUS - GRAPH_MARGIN
   );
   const centerY = ITEM_HEIGHT / 2;
-  const color = getAuthorColor("9b686497e6bc4e1e495b2ff4cfc15b59");
+  const hash = positionedCommit.commit.author.hash ?? NO_ONE;
+  const color = getAuthorColor(hash);
   ctx.arc(
     centerX,
     centerY,
@@ -142,7 +150,7 @@ async function drawCommit(
   ctx.fill();
 
   if (!positionedCommit.commit.is_merge) {
-    const imgOrPromise = getGravatarImage("9b686497e6bc4e1e495b2ff4cfc15b59");
+    const imgOrPromise = getGravatarImage(hash);
     const img = "then" in imgOrPromise ? await imgOrPromise : imgOrPromise;
     ctx.save();
     ctx.beginPath();

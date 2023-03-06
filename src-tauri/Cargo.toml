@@ -19,6 +19,8 @@ tauri = { version = "1.2", features = ["dialog", "shell-open"] }
 git2 = "0.16.1"
 itertools = "0.10.5"
 derivative = "2.2.0"
+md5 = "0.7.0"
+memoize = "0.4.0"
 
 [features]
 # by default Tauri runs in production mode

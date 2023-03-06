@@ -22,12 +22,21 @@ export const repo_path$ = state(
   null
 );
 
+export interface SignatureInfo {
+  name: string | null;
+  email: string | null;
+  hash: string | null;
+  time: number; // epoch seconds
+}
+
 export interface CommitInfo {
   id: string;
   summary: string | null;
   body: string | null;
   is_merge: boolean;
   time: number; // epoch seconds
+  author: SignatureInfo;
+  committer: SignatureInfo;
 }
 
 export interface BranchPath {
@@ -42,11 +51,12 @@ export interface PositionedCommit {
   paths: Array<[BranchPath, number]>;
 }
 
+const INITIAL_PAGE_SIZE = 5000; // Takes about ~100ms
 export const commits$ = repo_path$.pipeState(
   switchMap((path) =>
-    concat(
-      invoke<PositionedCommit[]>("get_commits", { path, amount: 100 }),
-      invoke<PositionedCommit[]>("get_commits", { path })
-    )
+    invoke<PositionedCommit[]>("get_commits", {
+      path,
+      amount: INITIAL_PAGE_SIZE,
+    })
   )
 );

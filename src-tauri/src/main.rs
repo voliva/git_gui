@@ -6,6 +6,7 @@
 mod commands;
 mod positioned_commit;
 mod settings;
+mod timer;
 
 use crate::commands::{get_commits, get_last_repo, open_repo};
 use tauri::{CustomMenuItem, Manager, Menu, Submenu};
