@@ -39,7 +39,7 @@ export const Grid = <T extends any>(props: {
             if (!props) return null;
 
             return (
-              <Cell width={getColumnWidth(props)}>
+              <Cell width={getColumnWidth(props)} class={props.itemClass}>
                 <Dynamic
                   component={props.children}
                   items={listProps.items}
@@ -87,7 +87,7 @@ export const Grid = <T extends any>(props: {
         };
 
         return (
-          <Cell width={getColumnWidth(props)}>
+          <Cell width={getColumnWidth(props)} class={props.headerClass}>
             <span>{props.header}</span>
             <Show when={props.minWidth !== undefined}>
               <div class={classes.resizer} onMouseDown={onMouseDown}></div>
@@ -121,8 +121,13 @@ export const Grid = <T extends any>(props: {
   );
 };
 
-const Cell = (props: { width?: number; children: JSXElement }) => (
+const Cell = (props: {
+  width?: number;
+  class?: string;
+  children: JSXElement;
+}) => (
   <div
+    class={props.class}
     classList={{
       [classes.cellAuto]: props.width === undefined,
       [classes.cellFixed]: props.width !== undefined,
@@ -150,6 +155,8 @@ export interface ColumnProps {
   minWidth?: number;
   maxWidth?: number;
   width?: number;
+  itemClass?: string;
+  headerClass?: string;
   children: (props: CellRendererProps<any>) => JSXElement;
 }
 

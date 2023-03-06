@@ -1,23 +1,42 @@
-use derivative::Derivative;
 use git2::{Commit, Error, Oid, Repository, Revwalk, Signature, Sort};
 use itertools::Itertools;
+use memoize::memoize;
 use serde::Serialize;
 use std::collections::HashSet;
 
-#[derive(Derivative, Serialize)]
-#[derivative(Debug)]
+#[derive(Debug, Serialize)]
+pub struct SignatureInfo {
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub hash: Option<String>,
+    pub time: i64,
+}
+
+#[memoize]
+fn get_md5_string<'a>(data: String) -> String {
+    format!("{:?}", md5::compute(data))
+}
+
+impl SignatureInfo {
+    pub fn new(signature: &Signature) -> Self {
+        SignatureInfo {
+            name: signature.name().map(|v| v.to_owned()),
+            email: signature.email().map(|v| v.to_owned()),
+            hash: signature.email().map(|v| get_md5_string(v.to_owned())),
+            time: signature.when().seconds(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
 pub struct CommitInfo {
     pub id: String,
     pub summary: Option<String>,
     pub body: Option<String>,
     pub time: i64,
     pub is_merge: bool,
-    #[derivative(Debug = "ignore")]
-    #[serde(skip)]
-    pub author: Signature<'static>,
-    #[derivative(Debug = "ignore")]
-    #[serde(skip)]
-    pub committer: Signature<'static>,
+    pub author: SignatureInfo,
+    pub committer: SignatureInfo,
 }
 
 impl CommitInfo {
@@ -28,8 +47,8 @@ impl CommitInfo {
             body: commit.body().map(|v| v.to_owned()),
             time: commit.time().seconds(),
             is_merge: commit.parent_count() > 1,
-            author: commit.author().to_owned(),
-            committer: commit.committer().to_owned(),
+            author: SignatureInfo::new(&commit.author()),
+            committer: SignatureInfo::new(&commit.committer()),
         }
     }
 }

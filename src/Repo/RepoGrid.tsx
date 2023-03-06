@@ -5,7 +5,7 @@ import * as classes from "./RepoGrid.css";
 import { BranchPath, commits$, PositionedCommit } from "./repoState";
 
 const ITEM_HEIGHT = 30;
-const COMMIT_RADIUS = 8;
+const COMMIT_RADIUS = 10;
 const COMMIT_BORDER = 2; // Extra around the gravatar
 const MERGE_RADIUS = 5;
 const GRAPH_MARGIN = 3;
@@ -43,7 +43,13 @@ export function RepoGrid() {
           >
             {GraphCell}
           </Column>
-          <Column header="Commit">{CommitCell}</Column>
+          <Column
+            header="Commit"
+            headerClass={classes.commitHeader}
+            itemClass={classes.highlightOnHover}
+          >
+            {CommitCell}
+          </Column>
         </Grid>
       ) : null}
     </>
@@ -104,7 +110,7 @@ const getGravatarImage = (hash: string) => {
     img.addEventListener("error", (e) => reject(e), { once: true });
     img.src = `https://www.gravatar.com/avatar/${hash}?s=${
       COMMIT_RADIUS * 2
-    }&d=identicon`;
+    }&d=retro`;
   });
   // Depending on runtime and cache maybe this can happen?
   if (gravatarImages.has(hash)) {
@@ -113,8 +119,15 @@ const getGravatarImage = (hash: string) => {
   gravatarImages.set(hash, promise);
   return promise;
 };
-function getAuthorColor(author: string) {
-  return 0;
+
+const MAGIC_NUMBER = 137.50776;
+const NO_ONE = "no_one";
+function getAuthorColor(hash: string) {
+  const turns = Number.parseInt(hash.slice(0, 5), 16) % 360;
+  if (Number.isNaN(turns)) {
+    return 0;
+  }
+  return Math.round(MAGIC_NUMBER * turns) % 360;
 }
 
 async function drawCommit(
@@ -128,7 +141,8 @@ async function drawCommit(
     width - COMMIT_RADIUS - GRAPH_MARGIN
   );
   const centerY = ITEM_HEIGHT / 2;
-  const color = getAuthorColor("9b686497e6bc4e1e495b2ff4cfc15b59");
+  const hash = positionedCommit.commit.author.hash ?? NO_ONE;
+  const color = getAuthorColor(hash);
   ctx.arc(
     centerX,
     centerY,
@@ -142,7 +156,7 @@ async function drawCommit(
   ctx.fill();
 
   if (!positionedCommit.commit.is_merge) {
-    const imgOrPromise = getGravatarImage("9b686497e6bc4e1e495b2ff4cfc15b59");
+    const imgOrPromise = getGravatarImage(hash);
     const img = "then" in imgOrPromise ? await imgOrPromise : imgOrPromise;
     ctx.save();
     ctx.beginPath();
@@ -189,7 +203,7 @@ function drawBase(
   }
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 2;
   ctx.moveTo(getPositionX(commitPos), ITEM_HEIGHT / 2);
   ctx.lineTo(getPositionX(pos), 0);
   ctx.stroke();
@@ -206,7 +220,7 @@ function drawFollow(
 
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 2;
   ctx.moveTo(getPositionX(pos), 0);
   ctx.lineTo(getPositionX(pos), ITEM_HEIGHT);
   ctx.stroke();
@@ -223,7 +237,7 @@ function drawParent(
   }
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 2;
   ctx.moveTo(getPositionX(commitPos), ITEM_HEIGHT / 2);
   ctx.lineTo(getPositionX(pos), ITEM_HEIGHT);
   ctx.stroke();
