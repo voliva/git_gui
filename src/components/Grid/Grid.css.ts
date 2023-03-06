@@ -56,6 +56,8 @@ export const resizer = style({
   right: 0,
   top: "3px",
   bottom: "3px",
-  width: "3px",
-  borderLeft: "1px solid white",
+  width: "1px",
+  padding: "0px 2px",
+  backgroundColor: "white",
+  backgroundClip: "content-box",
 });

@@ -6,7 +6,7 @@ import { BranchPath, commits$, PositionedCommit } from "./repoState";
 
 const ITEM_HEIGHT = 30;
 const COMMIT_RADIUS = 10;
-const COMMIT_BORDER = 1; // Extra around the gravatar
+const COMMIT_BORDER = 2; // Extra around the gravatar
 const MERGE_RADIUS = 5;
 const GRAPH_MARGIN = 3;
 
@@ -43,7 +43,13 @@ export function RepoGrid() {
           >
             {GraphCell}
           </Column>
-          <Column header="Commit">{CommitCell}</Column>
+          <Column
+            header="Commit"
+            headerClass={classes.commitHeader}
+            itemClass={classes.highlightOnHover}
+          >
+            {CommitCell}
+          </Column>
         </Grid>
       ) : null}
     </>
@@ -104,7 +110,7 @@ const getGravatarImage = (hash: string) => {
     img.addEventListener("error", (e) => reject(e), { once: true });
     img.src = `https://www.gravatar.com/avatar/${hash}?s=${
       COMMIT_RADIUS * 2
-    }&d=identicon`;
+    }&d=retro`;
   });
   // Depending on runtime and cache maybe this can happen?
   if (gravatarImages.has(hash)) {
@@ -197,7 +203,7 @@ function drawBase(
   }
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 2;
   ctx.moveTo(getPositionX(commitPos), ITEM_HEIGHT / 2);
   ctx.lineTo(getPositionX(pos), 0);
   ctx.stroke();
@@ -214,7 +220,7 @@ function drawFollow(
 
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 2;
   ctx.moveTo(getPositionX(pos), 0);
   ctx.lineTo(getPositionX(pos), ITEM_HEIGHT);
   ctx.stroke();
@@ -231,7 +237,7 @@ function drawParent(
   }
   ctx.beginPath();
   ctx.strokeStyle = getColor(color);
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 2;
   ctx.moveTo(getPositionX(commitPos), ITEM_HEIGHT / 2);
   ctx.lineTo(getPositionX(pos), ITEM_HEIGHT);
   ctx.stroke();
