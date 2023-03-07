@@ -18,7 +18,7 @@ export function RepoGrid() {
       commits()
         ?.flatMap((positioned) => [
           positioned.position,
-          ...positioned.paths.map(([path, _]) => path.payload),
+          ...positioned.paths.map((path) => path.payload),
         ])
         .reduce((a, b) => Math.max(a, b)) ?? 0;
     return getPositionMaxX(position + 1); // Add one to account for gradient
@@ -56,10 +56,14 @@ export function RepoGrid() {
   );
 }
 
+let BASE_COLOR = 150;
+
 // 200 because I want to start on blueish
 // 137.50776 because it's the most irrational turn, meaning it will go around and around repeating as least as posible
 // Derived from phi (227.5º -> 137.5º), maths in https://r-knott.surrey.ac.uk/Fibonacci/fibnat2.html
-const getColor = (i: number) => `hsl(${200 + i * 137.50776}, 100%, 75%)`;
+// I prefer a rainbow effect. 53 because it's a smallish prime number, far from any factor of 360 (between 45 and 60)
+// Alternatives would be 79 [72,90], 31 or 33 [30, 36], and 27 or 29 [24,30]
+const getColor = (i: number) => `hsl(${BASE_COLOR + i * 53}, 100%, 75%)`;
 
 const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
   let ref!: HTMLCanvasElement;
@@ -186,21 +190,20 @@ function drawPath(
   ctx: CanvasRenderingContext2D,
   width: number,
   commitPos: number,
-  [path, color]: [BranchPath, number]
+  path: BranchPath
 ) {
   switch (path.type) {
     case "Base":
-      return drawBase(ctx, width, color, commitPos, path.payload);
+      return drawBase(ctx, width, commitPos, path.payload);
     case "Follow":
-      return drawFollow(ctx, width, color, path.payload);
+      return drawFollow(ctx, width, path.payload);
     case "Parent":
-      return drawParent(ctx, width, color, commitPos, path.payload);
+      return drawParent(ctx, width, commitPos, path.payload);
   }
 }
 function drawBase(
   ctx: CanvasRenderingContext2D,
   width: number,
-  color: number,
   commitPos: number,
   pos: number
 ) {
@@ -208,24 +211,31 @@ function drawBase(
     return;
   }
   ctx.beginPath();
-  ctx.strokeStyle = getColor(color);
+  ctx.strokeStyle = getColor(pos);
   ctx.lineWidth = 2;
   ctx.moveTo(getPositionX(commitPos), ITEM_HEIGHT / 2);
+  if (commitPos !== pos) {
+    const radius = Math.floor(ITEM_HEIGHT / 2 - 2);
+    ctx.lineTo(getPositionX(pos) - radius, ITEM_HEIGHT / 2);
+    ctx.arc(
+      getPositionX(pos) - radius,
+      ITEM_HEIGHT / 2 - radius,
+      radius,
+      Math.PI / 2,
+      0,
+      true
+    );
+  }
   ctx.lineTo(getPositionX(pos), 0);
   ctx.stroke();
 }
-function drawFollow(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  color: number,
-  pos: number
-) {
+function drawFollow(ctx: CanvasRenderingContext2D, width: number, pos: number) {
   if (getPositionMaxX(pos) > width) {
     return;
   }
 
   ctx.beginPath();
-  ctx.strokeStyle = getColor(color);
+  ctx.strokeStyle = getColor(pos);
   ctx.lineWidth = 2;
   ctx.moveTo(getPositionX(pos), 0);
   ctx.lineTo(getPositionX(pos), ITEM_HEIGHT);
@@ -234,7 +244,6 @@ function drawFollow(
 function drawParent(
   ctx: CanvasRenderingContext2D,
   width: number,
-  color: number,
   commitPos: number,
   pos: number
 ) {
@@ -242,9 +251,22 @@ function drawParent(
     return;
   }
   ctx.beginPath();
-  ctx.strokeStyle = getColor(color);
+  ctx.strokeStyle = getColor(pos);
   ctx.lineWidth = 2;
   ctx.moveTo(getPositionX(commitPos), ITEM_HEIGHT / 2);
+  if (commitPos !== pos) {
+    const radius = Math.floor(ITEM_HEIGHT / 2 - 2);
+    const direction = commitPos > pos ? -1 : 1; // -1 to left, 1 to right
+    ctx.lineTo(getPositionX(pos) - direction * radius, ITEM_HEIGHT / 2);
+    ctx.arc(
+      getPositionX(pos) - direction * radius,
+      ITEM_HEIGHT / 2 + radius,
+      radius,
+      -Math.PI / 2,
+      direction === -1 ? Math.PI : 0,
+      direction === -1
+    );
+  }
   ctx.lineTo(getPositionX(pos), ITEM_HEIGHT);
   ctx.stroke();
 }

@@ -70,7 +70,7 @@ export interface PositionedCommit {
   commit: CommitInfo;
   position: number;
   color: number;
-  paths: Array<[BranchPath, number]>;
+  paths: Array<BranchPath>;
 }
 
 const INITIAL_PAGE_SIZE = 2000; // Takes about ~100ms
