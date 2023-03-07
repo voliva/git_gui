@@ -8,17 +8,25 @@ mod positioned_commit;
 mod settings;
 mod timer;
 
-use crate::commands::{get_commits, get_last_repo, open_repo};
+use crate::commands::{fetch, get_commits, get_last_repo, open_repo, stop_watch_repo, watch_repo};
+use notify::FsEventWatcher;
+use std::{sync::Mutex, thread};
 use tauri::{CustomMenuItem, Manager, Menu, Submenu};
 
-pub struct AppState {}
+#[derive(Default)]
+pub struct AppState {
+    watcher: Mutex<Option<FsEventWatcher>>,
+}
 
 fn main() {
     let app = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             open_repo,
             get_last_repo,
-            get_commits
+            get_commits,
+            fetch,
+            watch_repo,
+            stop_watch_repo
         ])
         .menu(
             Menu::new().add_submenu(Submenu::new(
@@ -30,13 +38,15 @@ fn main() {
         )
         .on_menu_event(|event| match event.menu_item_id() {
             "open" => {
-                if let Ok(path) = open_repo(event.window().app_handle()) {
-                    event
-                        .window()
-                        .app_handle()
-                        .emit_all("repo_change", path)
-                        .ok();
-                }
+                thread::spawn(move || {
+                    if let Ok(path) = open_repo(event.window().app_handle()) {
+                        event
+                            .window()
+                            .app_handle()
+                            .emit_all("repo_change", path)
+                            .ok();
+                    }
+                });
             }
             "close" => {
                 std::process::exit(0);
@@ -45,6 +55,7 @@ fn main() {
         })
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
+    app.manage(AppState::default());
 
     app.run(|_, _| {});
 }

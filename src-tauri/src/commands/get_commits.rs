@@ -15,7 +15,7 @@ impl From<git2::Error> for GetCommitsError {
     }
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_commits(
     path: String,
     amount: Option<usize>,
