@@ -3,6 +3,8 @@ import { createVar, globalStyle } from "@vanilla-extract/css";
 export const appBackground = createVar();
 export const appForeground = createVar();
 
+export const appBgColor = "#2f2f2f";
+
 globalStyle(":root", {
   fontFamily: "Inter, Avenir, Helvetica, Arial, sans-serif",
   fontSize: "16px",
@@ -19,7 +21,7 @@ globalStyle(":root", {
   WebkitTextSizeAdjust: "100%",
 
   vars: {
-    [appBackground]: "#2f2f2f",
+    [appBackground]: appBgColor,
     [appForeground]: "#f6f6f6",
   },
 });

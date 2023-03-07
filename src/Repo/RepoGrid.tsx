@@ -1,7 +1,9 @@
 import { CellRendererProps, Column, Grid } from "@/components/Grid";
 import { readState } from "@/rxState";
+import { appBgColor } from "@/style.css";
 import { createEffect, createMemo } from "solid-js";
 import * as classes from "./RepoGrid.css";
+import { hoverBgColor } from "./RepoGrid.css";
 import { BranchPath, commits$, PositionedCommit } from "./repoState";
 
 const ITEM_HEIGHT = 30;
@@ -18,7 +20,7 @@ export function RepoGrid() {
       commits()
         ?.flatMap((positioned) => [
           positioned.position,
-          ...positioned.paths.map(([path, _]) => path.payload),
+          ...positioned.paths.map((path) => path.payload),
         ])
         .reduce((a, b) => Math.max(a, b)) ?? 0;
     return getPositionMaxX(position + 1); // Add one to account for gradient
@@ -34,12 +36,14 @@ export function RepoGrid() {
         <Grid
           class={classes.repoGrid}
           items={commits()!}
-          itemSize={{ height: ITEM_HEIGHT }}
+          // -1: we need a bit of an overlap, otherwise sometimes there's a glitch where the lines look segmented.
+          itemSize={{ height: ITEM_HEIGHT - 1 }}
         >
           <Column
             width={getInitialWidth()}
             minWidth={COMMIT_RADIUS * 2 + GRAPH_MARGIN * 2}
             maxWidth={getMaxWidth()}
+            itemClass={classes.highlightOnHover}
           >
             {GraphCell}
           </Column>
@@ -56,10 +60,14 @@ export function RepoGrid() {
   );
 }
 
+let BASE_COLOR = 150;
+
 // 200 because I want to start on blueish
 // 137.50776 because it's the most irrational turn, meaning it will go around and around repeating as least as posible
 // Derived from phi (227.5º -> 137.5º), maths in https://r-knott.surrey.ac.uk/Fibonacci/fibnat2.html
-const getColor = (i: number) => `hsl(${200 + i * 137.50776}, 100%, 75%)`;
+// I prefer a rainbow effect. 53 because it's a smallish prime number, far from any factor of 360 (between 45 and 60)
+// Alternatives would be 79 [72,90], 31 or 33 [30, 36], and 27 or 29 [24,30]
+const getColor = (i: number) => `hsl(${BASE_COLOR + i * 53}, 100%, 75%)`;
 
 const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
   let ref!: HTMLCanvasElement;
@@ -71,7 +79,7 @@ const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
 
     ctx.clearRect(0, 0, width, ref.height);
     props.item.paths.forEach((path) => drawPath(ctx, width, position, path));
-    drawGradient(ctx, width);
+    drawGradient(ctx, width, props.isHovering);
     drawCommit(ctx, width, () => props.item);
   });
 
@@ -173,11 +181,16 @@ async function drawCommit(
   }
 }
 
-function drawGradient(ctx: CanvasRenderingContext2D, width: number) {
+function drawGradient(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  isHovering: boolean
+) {
   const xStart = width - COMMIT_RADIUS * 3;
   const grd = ctx.createLinearGradient(xStart, 0, width + 5, 0);
-  grd.addColorStop(0, "#2f2f2f00");
-  grd.addColorStop(0.4, "#2f2f2fff");
+  const bgColor = isHovering ? hoverBgColor : appBgColor;
+  grd.addColorStop(0, bgColor + "00");
+  grd.addColorStop(0.4, bgColor + "ff");
   ctx.fillStyle = grd;
   ctx.fillRect(xStart, 0, width + 5, ITEM_HEIGHT);
 }
@@ -186,21 +199,20 @@ function drawPath(
   ctx: CanvasRenderingContext2D,
   width: number,
   commitPos: number,
-  [path, color]: [BranchPath, number]
+  path: BranchPath
 ) {
   switch (path.type) {
     case "Base":
-      return drawBase(ctx, width, color, commitPos, path.payload);
+      return drawBase(ctx, width, commitPos, path.payload);
     case "Follow":
-      return drawFollow(ctx, width, color, path.payload);
+      return drawFollow(ctx, width, path.payload);
     case "Parent":
-      return drawParent(ctx, width, color, commitPos, path.payload);
+      return drawParent(ctx, width, commitPos, path.payload);
   }
 }
 function drawBase(
   ctx: CanvasRenderingContext2D,
   width: number,
-  color: number,
   commitPos: number,
   pos: number
 ) {
@@ -208,25 +220,27 @@ function drawBase(
     return;
   }
   ctx.beginPath();
-  ctx.strokeStyle = getColor(color);
+  ctx.strokeStyle = getColor(pos);
   ctx.lineWidth = 2;
+  ctx.lineCap = "round";
   ctx.moveTo(getPositionX(commitPos), ITEM_HEIGHT / 2);
+  if (commitPos !== pos) {
+    const radius = ITEM_HEIGHT / 3;
+    ctx.lineTo(getPositionX(pos) - radius, ITEM_HEIGHT / 2);
+    ctx.lineTo(getPositionX(pos), ITEM_HEIGHT / 2 - radius);
+  }
   ctx.lineTo(getPositionX(pos), 0);
   ctx.stroke();
 }
-function drawFollow(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  color: number,
-  pos: number
-) {
+function drawFollow(ctx: CanvasRenderingContext2D, width: number, pos: number) {
   if (getPositionMaxX(pos) > width) {
     return;
   }
 
   ctx.beginPath();
-  ctx.strokeStyle = getColor(color);
+  ctx.strokeStyle = getColor(pos);
   ctx.lineWidth = 2;
+  ctx.lineCap = "round";
   ctx.moveTo(getPositionX(pos), 0);
   ctx.lineTo(getPositionX(pos), ITEM_HEIGHT);
   ctx.stroke();
@@ -234,7 +248,6 @@ function drawFollow(
 function drawParent(
   ctx: CanvasRenderingContext2D,
   width: number,
-  color: number,
   commitPos: number,
   pos: number
 ) {
@@ -242,9 +255,16 @@ function drawParent(
     return;
   }
   ctx.beginPath();
-  ctx.strokeStyle = getColor(color);
+  ctx.strokeStyle = getColor(pos);
   ctx.lineWidth = 2;
+  ctx.lineCap = "round";
   ctx.moveTo(getPositionX(commitPos), ITEM_HEIGHT / 2);
+  if (commitPos !== pos) {
+    const radius = ITEM_HEIGHT / 3;
+    const direction = commitPos > pos ? -1 : 1; // -1 to left, 1 to right
+    ctx.lineTo(getPositionX(pos) - direction * radius, ITEM_HEIGHT / 2);
+    ctx.lineTo(getPositionX(pos), ITEM_HEIGHT / 2 + radius);
+  }
   ctx.lineTo(getPositionX(pos), ITEM_HEIGHT);
   ctx.stroke();
 }

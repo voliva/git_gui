@@ -1,4 +1,4 @@
-import { globalStyle, style } from "@vanilla-extract/css";
+import { style } from "@vanilla-extract/css";
 import { itemContainer } from "@/components/Grid/Grid.css";
 
 export const repoGrid = style({
@@ -20,10 +20,11 @@ export const commitHeader = style({
   padding: "0px 0.2rem",
 });
 
+export const hoverBgColor = "#444444";
 export const highlightOnHover = style({
   selectors: {
     [`${itemContainer}:hover &`]: {
-      backgroundColor: "rgba(255,255,255,0.1)",
+      backgroundColor: hoverBgColor,
     },
   },
 });
