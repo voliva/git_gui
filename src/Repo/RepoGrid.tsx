@@ -34,7 +34,8 @@ export function RepoGrid() {
         <Grid
           class={classes.repoGrid}
           items={commits()!}
-          itemSize={{ height: ITEM_HEIGHT }}
+          // -1: we need a bit of an overlap, otherwise sometimes there's a glitch where the lines look segmented.
+          itemSize={{ height: ITEM_HEIGHT - 1 }}
         >
           <Column
             width={getInitialWidth()}
@@ -213,18 +214,12 @@ function drawBase(
   ctx.beginPath();
   ctx.strokeStyle = getColor(pos);
   ctx.lineWidth = 2;
+  ctx.lineCap = "round";
   ctx.moveTo(getPositionX(commitPos), ITEM_HEIGHT / 2);
   if (commitPos !== pos) {
-    const radius = Math.floor(ITEM_HEIGHT / 2 - 2);
+    const radius = ITEM_HEIGHT / 3;
     ctx.lineTo(getPositionX(pos) - radius, ITEM_HEIGHT / 2);
-    ctx.arc(
-      getPositionX(pos) - radius,
-      ITEM_HEIGHT / 2 - radius,
-      radius,
-      Math.PI / 2,
-      0,
-      true
-    );
+    ctx.lineTo(getPositionX(pos), ITEM_HEIGHT / 2 - radius);
   }
   ctx.lineTo(getPositionX(pos), 0);
   ctx.stroke();
@@ -237,6 +232,7 @@ function drawFollow(ctx: CanvasRenderingContext2D, width: number, pos: number) {
   ctx.beginPath();
   ctx.strokeStyle = getColor(pos);
   ctx.lineWidth = 2;
+  ctx.lineCap = "round";
   ctx.moveTo(getPositionX(pos), 0);
   ctx.lineTo(getPositionX(pos), ITEM_HEIGHT);
   ctx.stroke();
@@ -253,19 +249,13 @@ function drawParent(
   ctx.beginPath();
   ctx.strokeStyle = getColor(pos);
   ctx.lineWidth = 2;
+  ctx.lineCap = "round";
   ctx.moveTo(getPositionX(commitPos), ITEM_HEIGHT / 2);
   if (commitPos !== pos) {
-    const radius = Math.floor(ITEM_HEIGHT / 2 - 2);
+    const radius = ITEM_HEIGHT / 3;
     const direction = commitPos > pos ? -1 : 1; // -1 to left, 1 to right
     ctx.lineTo(getPositionX(pos) - direction * radius, ITEM_HEIGHT / 2);
-    ctx.arc(
-      getPositionX(pos) - direction * radius,
-      ITEM_HEIGHT / 2 + radius,
-      radius,
-      -Math.PI / 2,
-      direction === -1 ? Math.PI : 0,
-      direction === -1
-    );
+    ctx.lineTo(getPositionX(pos), ITEM_HEIGHT / 2 + radius);
   }
   ctx.lineTo(getPositionX(pos), ITEM_HEIGHT);
   ctx.stroke();

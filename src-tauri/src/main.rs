@@ -9,13 +9,13 @@ mod settings;
 mod timer;
 
 use crate::commands::{fetch, get_commits, get_last_repo, open_repo, stop_watch_repo, watch_repo};
-use notify::FsEventWatcher;
+use notify::RecommendedWatcher;
 use std::{sync::Mutex, thread};
 use tauri::{CustomMenuItem, Manager, Menu, Submenu};
 
 #[derive(Default)]
 pub struct AppState {
-    watcher: Mutex<Option<FsEventWatcher>>,
+    watcher: Mutex<Option<RecommendedWatcher>>,
 }
 
 fn main() {
