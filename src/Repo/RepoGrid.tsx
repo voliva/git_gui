@@ -1,7 +1,9 @@
 import { CellRendererProps, Column, Grid } from "@/components/Grid";
 import { readState } from "@/rxState";
+import { appBgColor } from "@/style.css";
 import { createEffect, createMemo } from "solid-js";
 import * as classes from "./RepoGrid.css";
+import { hoverBgColor } from "./RepoGrid.css";
 import { BranchPath, commits$, PositionedCommit } from "./repoState";
 
 const ITEM_HEIGHT = 30;
@@ -41,6 +43,7 @@ export function RepoGrid() {
             width={getInitialWidth()}
             minWidth={COMMIT_RADIUS * 2 + GRAPH_MARGIN * 2}
             maxWidth={getMaxWidth()}
+            itemClass={classes.highlightOnHover}
           >
             {GraphCell}
           </Column>
@@ -76,7 +79,7 @@ const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
 
     ctx.clearRect(0, 0, width, ref.height);
     props.item.paths.forEach((path) => drawPath(ctx, width, position, path));
-    drawGradient(ctx, width);
+    drawGradient(ctx, width, props.isHovering);
     drawCommit(ctx, width, () => props.item);
   });
 
@@ -178,11 +181,16 @@ async function drawCommit(
   }
 }
 
-function drawGradient(ctx: CanvasRenderingContext2D, width: number) {
+function drawGradient(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  isHovering: boolean
+) {
   const xStart = width - COMMIT_RADIUS * 3;
   const grd = ctx.createLinearGradient(xStart, 0, width + 5, 0);
-  grd.addColorStop(0, "#2f2f2f00");
-  grd.addColorStop(0.4, "#2f2f2fff");
+  const bgColor = isHovering ? hoverBgColor : appBgColor;
+  grd.addColorStop(0, bgColor + "00");
+  grd.addColorStop(0.4, bgColor + "ff");
   ctx.fillStyle = grd;
   ctx.fillRect(xStart, 0, width + 5, ITEM_HEIGHT);
 }

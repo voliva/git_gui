@@ -4,7 +4,7 @@ import {
   VirtualItemSize,
 } from "@minht11/solid-virtual-container";
 import { ReactiveWeakMap } from "@solid-primitives/map";
-import { children, For, JSXElement, Show } from "solid-js";
+import { children, createSignal, For, JSXElement, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import * as classes from "./Grid.css";
 
@@ -24,6 +24,8 @@ export const Grid = <T extends any>(props: {
   };
 
   const ListItem = (listProps: VirtualItemProps<T>) => {
+    const [isHovering, setIsHovering] = createSignal(false);
+
     return (
       <div
         class={classes.itemContainer}
@@ -32,6 +34,8 @@ export const Grid = <T extends any>(props: {
         // Used for keyboard navigation and accessibility.
         tabIndex={listProps.tabIndex}
         role="listitem"
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
       >
         <For each={resolved.toArray()}>
           {(item, columnIndex) => {
@@ -48,6 +52,7 @@ export const Grid = <T extends any>(props: {
                   width={getColumnWidth(props)}
                   columnIndex={columnIndex()}
                   columnProps={props}
+                  isHovering={isHovering()}
                 />
               </Cell>
             );
@@ -148,6 +153,7 @@ export interface CellRendererProps<T> {
   width: number | undefined;
   columnIndex: number;
   columnProps: ColumnProps;
+  isHovering: boolean;
 }
 
 export interface ColumnProps {
