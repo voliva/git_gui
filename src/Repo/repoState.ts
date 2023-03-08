@@ -81,6 +81,8 @@ const getCommits$ = (path: string) => {
   });
 };
 
+const getRefs$ = (path: string) => invoke<any>("get_refs", { path });
+
 const hasFocus$ = timer(0, 1000).pipe(
   map(() => document.hasFocus()),
   distinctUntilChanged()
@@ -107,7 +109,7 @@ export const isFetching$ = state(
   false
 );
 
-const shouldUpdateCommits$ = defer(() => repoEvents$).pipe(
+const shouldUpdateRepo$ = defer(() => repoEvents$).pipe(
   filter((v) => v.paths.some((path) => path.includes(".git/refs"))),
   connect((shared$) =>
     hasFocus$.pipe(
@@ -121,7 +123,13 @@ const shouldUpdateCommits$ = defer(() => repoEvents$).pipe(
 
 export const commits$ = repo_path$.pipeState(
   switchMap((path) =>
-    shouldUpdateCommits$.pipe(losslessExhaustMap(() => getCommits$(path!)))
+    shouldUpdateRepo$.pipe(losslessExhaustMap(() => getCommits$(path!)))
+  )
+);
+
+export const refs$ = repo_path$.pipeState(
+  switchMap((path) =>
+    shouldUpdateRepo$.pipe(losslessExhaustMap(() => getRefs$(path!)))
   )
 );
 

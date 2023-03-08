@@ -8,7 +8,9 @@ mod positioned_commit;
 mod settings;
 mod timer;
 
-use crate::commands::{fetch, get_commits, get_last_repo, open_repo, stop_watch_repo, watch_repo};
+use crate::commands::{
+    fetch, get_commits, get_last_repo, get_refs, open_repo, stop_watch_repo, watch_repo,
+};
 use notify::RecommendedWatcher;
 use std::{sync::Mutex, thread};
 use tauri::{CustomMenuItem, Manager, Menu, Submenu};
@@ -26,7 +28,8 @@ fn main() {
             get_commits,
             fetch,
             watch_repo,
-            stop_watch_repo
+            stop_watch_repo,
+            get_refs
         ])
         .menu(
             Menu::new().add_submenu(Submenu::new(
