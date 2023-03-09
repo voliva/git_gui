@@ -32,6 +32,7 @@ export const itemContainer = style({
   width: "100%",
   display: "flex",
   backgroundColor: safeGridBg,
+  outline: "none",
 });
 
 export const cellAuto = style({

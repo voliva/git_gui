@@ -7,12 +7,14 @@ import { ReactiveWeakMap } from "@solid-primitives/map";
 import { children, createSignal, For, JSXElement, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import * as classes from "./Grid.css";
+import classNames from "classnames";
 
 export const Grid = <T extends any>(props: {
   class?: string;
   items: T[];
   itemSize: VirtualItemSize;
   children: any;
+  itemClass?: (item: T) => string | null | undefined;
 }) => {
   const resolved = children(() => props.children);
   /**
@@ -28,7 +30,10 @@ export const Grid = <T extends any>(props: {
 
     return (
       <div
-        class={classes.itemContainer}
+        class={classNames(
+          classes.itemContainer,
+          props.itemClass?.(listProps.item)
+        )}
         // Required for items to switch places.
         style={{ ...listProps.style }}
         // Used for keyboard navigation and accessibility.

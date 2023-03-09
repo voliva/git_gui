@@ -14,6 +14,12 @@ export const commitCell = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
   padding: "0px 0.2rem",
+  display: "flex",
+});
+
+export const activeCommitBgColor = "#101040";
+export const activeCommitRow = style({
+  background: activeCommitBgColor,
 });
 
 export const commitHeader = style({
@@ -25,6 +31,9 @@ export const highlightOnHover = style({
   selectors: {
     [`${itemContainer}:hover &`]: {
       backgroundColor: hoverBgColor,
+    },
+    [`${itemContainer}${activeCommitRow}:hover &`]: {
+      backgroundColor: activeCommitBgColor,
     },
   },
 });

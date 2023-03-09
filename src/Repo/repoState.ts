@@ -81,8 +81,6 @@ const getCommits$ = (path: string) => {
   });
 };
 
-const getRefs$ = (path: string) => invoke<any>("get_refs", { path });
-
 const hasFocus$ = timer(0, 1000).pipe(
   map(() => document.hasFocus()),
   distinctUntilChanged()
@@ -90,7 +88,8 @@ const hasFocus$ = timer(0, 1000).pipe(
 
 export const [startFetch$, fetch] = createSignal();
 export const isFetching$ = state(
-  merge(startFetch$, hasFocus$.pipe(filter((hasFocus) => hasFocus))).pipe(
+  // merge(startFetch$, hasFocus$.pipe(filter((hasFocus) => hasFocus))).pipe(
+  startFetch$.pipe(
     withLatestFrom(repo_path$),
     losslessExhaustMap(([, path]) =>
       concat(
@@ -127,10 +126,98 @@ export const commits$ = repo_path$.pipeState(
   )
 );
 
+interface LocalRef {
+  id: string;
+  name: string;
+  is_head: boolean;
+}
+interface RemoteRef {
+  id: string;
+  remote: string;
+  name: string;
+}
+
+type RustRef =
+  | { type: "Head"; payload: string }
+  | { type: "LocalBranch"; payload: LocalRef }
+  | { type: "RemoteBranch"; payload: RemoteRef }
+  | { type: "Tag"; payload: LocalRef };
+
+export interface Refs {
+  head: string;
+  activeBranch: LocalRef | null;
+  local: Array<LocalRef>;
+  remotes: Record<string, Array<RemoteRef>>;
+  tags: Array<LocalRef>;
+  lookup: Record<string, Array<RustRef> | undefined>;
+}
+
+const getRefs$ = (path: string) => invoke<Array<RustRef>>("get_refs", { path });
+const typeOrderLookup: Record<RustRef["type"], number> = {
+  Head: 99,
+  LocalBranch: 0,
+  Tag: 1,
+  RemoteBranch: 2,
+};
 export const refs$ = repo_path$.pipeState(
   switchMap((path) =>
     shouldUpdateRepo$.pipe(losslessExhaustMap(() => getRefs$(path!)))
-  )
+  ),
+  map((refs) => {
+    const result: Refs = {
+      head: "",
+      activeBranch: null,
+      local: [],
+      remotes: {},
+      tags: [],
+      lookup: {},
+    };
+
+    refs.forEach((ref) => {
+      switch (ref.type) {
+        case "Head":
+          result.head = ref.payload;
+          break;
+        case "LocalBranch":
+          result.local.push(ref.payload);
+          result.lookup[ref.payload.id] = result.lookup[ref.payload.id] || [];
+          result.lookup[ref.payload.id]?.push(ref);
+          if (ref.payload.is_head) {
+            result.activeBranch = ref.payload;
+          }
+          break;
+        case "RemoteBranch":
+          result.remotes[ref.payload.remote] =
+            result.remotes[ref.payload.remote] || [];
+          result.remotes[ref.payload.remote].push(ref.payload);
+          result.lookup[ref.payload.id] = result.lookup[ref.payload.id] || [];
+          result.lookup[ref.payload.id]?.push(ref);
+          break;
+        case "Tag":
+          result.tags.push(ref.payload);
+          result.lookup[ref.payload.id] = result.lookup[ref.payload.id] || [];
+          result.lookup[ref.payload.id]?.push(ref);
+          break;
+      }
+    });
+
+    Object.keys(result.remotes).forEach((remote) =>
+      result.remotes[remote]?.sort((a, b) => a.name.localeCompare(b.name))
+    );
+
+    Object.keys(result.lookup).forEach((id) =>
+      result.lookup[id]?.sort((a, b) => {
+        if (a.type === b.type && a.type !== "Head" && b.type !== "Head")
+          return a.payload.name.localeCompare(b.payload.name);
+        return typeOrderLookup[a.type] - typeOrderLookup[b.type];
+      })
+    );
+
+    result.local.sort((a, b) => a.name.localeCompare(b.name));
+    result.tags.sort((a, b) => a.name.localeCompare(b.name));
+
+    return result;
+  })
 );
 
 enum AccessMode {

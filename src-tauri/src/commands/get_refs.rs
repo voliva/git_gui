@@ -6,6 +6,7 @@ use crate::timer::Timer;
 
 #[derive(Serialize)]
 pub enum GetRefsError {
+    NoHead,
     Read(String),
 }
 
@@ -24,6 +25,7 @@ pub struct LocalRef {
 
 pub enum ParseRefError {
     NoRef,
+    NoRemote,
     Git2Error(git2::Error),
     InvalidUTF8,
 }
@@ -61,13 +63,19 @@ impl TryFrom<Branch<'_>> for RemoteRef {
     fn try_from(branch: Branch<'_>) -> Result<Self, Self::Error> {
         let name = branch.name()?.ok_or(ParseRefError::InvalidUTF8)?.to_owned();
 
+        let (remote, name) = name
+            .splitn(2, "/")
+            .map(|v| v.to_owned())
+            .collect_tuple()
+            .ok_or(ParseRefError::NoRemote)?;
+
         Ok(RemoteRef {
             id: branch
                 .get()
                 .target()
                 .ok_or(ParseRefError::NoRef)?
                 .to_string(),
-            remote: String::new(),
+            remote,
             name,
         })
     }
@@ -102,45 +110,43 @@ pub fn get_refs(path: String) -> Result<Vec<Ref>, GetRefsError> {
         .head()?
         .resolve()?
         .target()
-        .map(|oid| Ref::Head(oid.to_string()));
+        .map(|oid| Ref::Head(oid.to_string()))
+        .ok_or(GetRefsError::NoHead)?;
+
+    let mut list = vec![head];
 
     let branches = repo
         .branches(None)?
         .filter_map(|result| result.ok().and_then(|branch| Ref::try_from(branch).ok()));
 
-    let tags = get_tags(&repo)?;
-    let tags = tags.iter().filter_map(|tag| {
-        let name = tag.name().map(|name| name.to_owned());
-        let commit_id = tag
-            .peel()
-            .ok()
-            .and_then(|obj| obj.as_commit().map(|commit| commit.id().to_string()));
+    list.extend(branches);
 
-        name.zip(commit_id).map(|(name, id)| {
-            Ref::Tag(LocalRef {
-                id,
-                name,
-                is_head: false,
-            })
+    let tags = get_tags(&repo)?;
+    let tags = tags.iter().map(|(oid, name)| {
+        Ref::Tag(LocalRef {
+            id: oid.to_string(),
+            name: name.clone(),
+            is_head: false,
         })
     });
 
-    let mut list = branches.chain(tags).collect_vec();
-    if let Some(head) = head {
-        list.push(head);
-    }
+    list.extend(tags);
 
     println!("get_refs: {}", timer.lap());
 
     Ok(list)
 }
 
-fn get_tags(repo: &Repository) -> Result<Vec<git2::Tag>, git2::Error> {
+fn get_tags(repo: &Repository) -> Result<Vec<(git2::Oid, String)>, git2::Error> {
     let mut tags = vec![];
 
-    repo.tag_foreach(|id, _| {
-        if let Ok(tag) = repo.find_tag(id) {
-            tags.push(tag);
+    repo.tag_foreach(|id, u8| {
+        let ref_name = std::str::from_utf8(u8)
+            .ok()
+            .and_then(|ref_name| ref_name.splitn(3, "/").collect_tuple())
+            .map(|(_, _, name)| name.to_owned());
+        if let Some(name) = ref_name {
+            tags.push((id, name));
         }
         true
     })?;
