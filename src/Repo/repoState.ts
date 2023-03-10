@@ -137,7 +137,7 @@ interface RemoteRef {
   name: string;
 }
 
-type RustRef =
+export type RustRef =
   | { type: "Head"; payload: string }
   | { type: "LocalBranch"; payload: LocalRef }
   | { type: "RemoteBranch"; payload: RemoteRef }
@@ -207,6 +207,13 @@ export const refs$ = repo_path$.pipeState(
 
     Object.keys(result.lookup).forEach((id) =>
       result.lookup[id]?.sort((a, b) => {
+        if (a.type === "LocalBranch" && b.type === "LocalBranch") {
+          if (a.payload.is_head && !b.payload.is_head) {
+            return -1;
+          } else if (!a.payload.is_head && b.payload.is_head) {
+            return 1;
+          }
+        }
         if (a.type === b.type && a.type !== "Head" && b.type !== "Head")
           return a.payload.name.localeCompare(b.payload.name);
         return typeOrderLookup[a.type] - typeOrderLookup[b.type];

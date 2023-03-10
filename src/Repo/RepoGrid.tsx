@@ -2,11 +2,30 @@ import { CellRendererProps, Column, Grid } from "@/components/Grid";
 import { readParametricState, readState } from "@/rxState";
 import { appBgColor } from "@/style.css";
 import { state } from "@react-rxjs/core";
+import classNames from "classnames";
 import { map } from "rxjs";
-import { createEffect, createMemo, For } from "solid-js";
+import { createEffect, createMemo, For, Show, ValidComponent } from "solid-js";
 import * as classes from "./RepoGrid.css";
 import { hoverBgColor } from "./RepoGrid.css";
-import { BranchPath, commits$, PositionedCommit, refs$ } from "./repoState";
+import {
+  BranchPath,
+  commits$,
+  PositionedCommit,
+  refs$,
+  RustRef,
+} from "./repoState";
+import { AiOutlineCloud } from "solid-icons/ai";
+import { FaRegularHardDrive } from "solid-icons/fa";
+import { AiOutlineTag } from "solid-icons/ai";
+import { FaSolidHorseHead } from "solid-icons/fa";
+import { Dynamic } from "solid-js/web";
+
+const icons: Record<RustRef["type"], ValidComponent> = {
+  Head: FaSolidHorseHead,
+  LocalBranch: FaRegularHardDrive,
+  RemoteBranch: AiOutlineCloud,
+  Tag: AiOutlineTag,
+};
 
 const ITEM_HEIGHT = 30;
 const COMMIT_RADIUS = 10;
@@ -44,7 +63,9 @@ export function RepoGrid() {
           // -1: we need a bit of an overlap, otherwise sometimes there's a glitch where the lines look segmented.
           itemSize={{ height: ITEM_HEIGHT - 1 }}
           itemClass={(item) =>
-            item.commit.id === activeId() ? classes.activeCommitRow : null
+            classNames(classes.repoGridRow, {
+              [classes.activeCommitRow]: item.commit.id === activeId(),
+            })
           }
         >
           <Column
@@ -122,12 +143,23 @@ const CommitRefs = (props: { id: string }) => {
   const isDetachedHead = readParametricState(isDetachedHead$, () => props.id);
 
   return (
-    <div>
-      {isDetachedHead() ? <div>HEAD</div> : null}
+    <div class={classes.commitRefs}>
+      {isDetachedHead() ? (
+        <div class={classes.refTag}>
+          <div class={classes.refTagName}>HEAD</div>
+          <FaSolidHorseHead class={classes.refTagIcon} />
+        </div>
+      ) : null}
       <For each={refs()}>
         {(ref) => (
-          <div style={{ color: "red" }}>
-            {ref.type === "Head" ? null : ref.payload.name}
+          <div class={classes.refTag}>
+            <div class={classes.refTagName}>
+              {ref.type === "Head" ? null : ref.payload.name}
+            </div>
+            <Dynamic class={classes.refTagIcon} component={icons[ref.type]} />
+            <Show when={ref.type === "LocalBranch" && ref.payload.is_head}>
+              <FaSolidHorseHead class={classes.refTagIcon} />
+            </Show>
           </div>
         )}
       </For>
@@ -139,7 +171,7 @@ const CommitCell = (props: CellRendererProps<PositionedCommit>) => {
   return (
     <div class={classes.commitCell}>
       <CommitRefs id={props.item.commit.id} />
-      <div>{props.item.commit.summary}</div>
+      <div class={classes.commitSummary}>{props.item.commit.summary}</div>
     </div>
   );
 };
