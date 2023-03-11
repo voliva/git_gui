@@ -19,6 +19,7 @@ export const commitGraph = style({
 
 export const commitCell = style({
   flex: "1 1 auto",
+  width: "100%",
   padding: "0px 0.2rem",
   display: "flex",
   alignItems: "center",
@@ -35,7 +36,7 @@ export const commitSummary = style({
 
 export const commitRefs = style({
   flex: "0 0 auto",
-  width: "80px",
+  width: "120px",
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",

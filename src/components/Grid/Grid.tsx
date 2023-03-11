@@ -15,6 +15,7 @@ export const Grid = <T extends any>(props: {
   itemSize: VirtualItemSize;
   children: any;
   itemClass?: (item: T) => string | null | undefined;
+  onRowClick?: (item: T) => void;
 }) => {
   const resolved = children(() => props.children);
   /**
@@ -41,6 +42,7 @@ export const Grid = <T extends any>(props: {
         role="listitem"
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
+        onClick={() => props.onRowClick?.(listProps.item)}
       >
         <For each={resolved.toArray()}>
           {(item, columnIndex) => {

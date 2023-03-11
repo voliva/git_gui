@@ -22,6 +22,7 @@ import {
   startWith,
   Subscription,
   switchMap,
+  take,
   timer,
   withLatestFrom,
 } from "rxjs";
@@ -126,22 +127,29 @@ export const commits$ = repo_path$.pipeState(
   )
 );
 
-interface LocalRef {
+export interface LocalRef {
   id: string;
   name: string;
   is_head: boolean;
 }
-interface RemoteRef {
+export interface RemoteRef {
   id: string;
   remote: string;
   name: string;
 }
 
-export type RustRef =
-  | { type: "Head"; payload: string }
-  | { type: "LocalBranch"; payload: LocalRef }
-  | { type: "RemoteBranch"; payload: RemoteRef }
-  | { type: "Tag"; payload: LocalRef };
+export enum RefType {
+  Head = "Head",
+  LocalBranch = "LocalBranch",
+  RemoteBranch = "RemoteBranch",
+  Tag = "Tag",
+}
+
+type RustRef =
+  | { type: RefType.Head; payload: string }
+  | { type: RefType.LocalBranch; payload: LocalRef }
+  | { type: RefType.RemoteBranch; payload: RemoteRef }
+  | { type: RefType.Tag; payload: LocalRef };
 
 export interface Refs {
   head: string;
@@ -149,16 +157,9 @@ export interface Refs {
   local: Array<LocalRef>;
   remotes: Record<string, Array<RemoteRef>>;
   tags: Array<LocalRef>;
-  lookup: Record<string, Array<RustRef> | undefined>;
 }
 
 const getRefs$ = (path: string) => invoke<Array<RustRef>>("get_refs", { path });
-const typeOrderLookup: Record<RustRef["type"], number> = {
-  Head: 99,
-  LocalBranch: 0,
-  Tag: 1,
-  RemoteBranch: 2,
-};
 export const refs$ = repo_path$.pipeState(
   switchMap((path) =>
     shouldUpdateRepo$.pipe(losslessExhaustMap(() => getRefs$(path!)))
@@ -170,7 +171,6 @@ export const refs$ = repo_path$.pipeState(
       local: [],
       remotes: {},
       tags: [],
-      lookup: {},
     };
 
     refs.forEach((ref) => {
@@ -180,8 +180,6 @@ export const refs$ = repo_path$.pipeState(
           break;
         case "LocalBranch":
           result.local.push(ref.payload);
-          result.lookup[ref.payload.id] = result.lookup[ref.payload.id] || [];
-          result.lookup[ref.payload.id]?.push(ref);
           if (ref.payload.is_head) {
             result.activeBranch = ref.payload;
           }
@@ -190,13 +188,9 @@ export const refs$ = repo_path$.pipeState(
           result.remotes[ref.payload.remote] =
             result.remotes[ref.payload.remote] || [];
           result.remotes[ref.payload.remote].push(ref.payload);
-          result.lookup[ref.payload.id] = result.lookup[ref.payload.id] || [];
-          result.lookup[ref.payload.id]?.push(ref);
           break;
         case "Tag":
           result.tags.push(ref.payload);
-          result.lookup[ref.payload.id] = result.lookup[ref.payload.id] || [];
-          result.lookup[ref.payload.id]?.push(ref);
           break;
       }
     });
@@ -205,26 +199,22 @@ export const refs$ = repo_path$.pipeState(
       result.remotes[remote]?.sort((a, b) => a.name.localeCompare(b.name))
     );
 
-    Object.keys(result.lookup).forEach((id) =>
-      result.lookup[id]?.sort((a, b) => {
-        if (a.type === "LocalBranch" && b.type === "LocalBranch") {
-          if (a.payload.is_head && !b.payload.is_head) {
-            return -1;
-          } else if (!a.payload.is_head && b.payload.is_head) {
-            return 1;
-          }
-        }
-        if (a.type === b.type && a.type !== "Head" && b.type !== "Head")
-          return a.payload.name.localeCompare(b.payload.name);
-        return typeOrderLookup[a.type] - typeOrderLookup[b.type];
-      })
-    );
-
     result.local.sort((a, b) => a.name.localeCompare(b.name));
     result.tags.sort((a, b) => a.name.localeCompare(b.name));
 
     return result;
   })
+);
+
+export const [commitChange$, setActiveCommit] = createSignal<string>();
+export const activeCommit$ = state(
+  concat(
+    refs$.pipe(
+      map((refs) => refs.head),
+      take(1)
+    ),
+    commitChange$
+  )
 );
 
 enum AccessMode {

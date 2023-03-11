@@ -4,27 +4,40 @@ import { appBgColor } from "@/style.css";
 import { state } from "@react-rxjs/core";
 import classNames from "classnames";
 import { map } from "rxjs";
-import { createEffect, createMemo, For, Show, ValidComponent } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  Show,
+  ValidComponent,
+} from "solid-js";
 import * as classes from "./RepoGrid.css";
 import { hoverBgColor } from "./RepoGrid.css";
 import {
+  activeCommit$,
   BranchPath,
   commits$,
   PositionedCommit,
   refs$,
-  RustRef,
+  RefType,
+  RemoteRef,
+  setActiveCommit,
 } from "./repoState";
 import { AiOutlineCloud } from "solid-icons/ai";
 import { FaRegularHardDrive } from "solid-icons/fa";
 import { AiOutlineTag } from "solid-icons/ai";
 import { FaSolidHorseHead } from "solid-icons/fa";
 import { Dynamic } from "solid-js/web";
+import { LookedUpRef, RefGroup, refsLookup$ } from "./refsLookup";
+import { useTippy } from "solid-tippy";
+import "tippy.js/dist/tippy.css";
 
-const icons: Record<RustRef["type"], ValidComponent> = {
-  Head: FaSolidHorseHead,
-  LocalBranch: FaRegularHardDrive,
-  RemoteBranch: AiOutlineCloud,
-  Tag: AiOutlineTag,
+const icons: Record<RefType, ValidComponent> = {
+  [RefType.Head]: FaSolidHorseHead,
+  [RefType.LocalBranch]: FaRegularHardDrive,
+  [RefType.RemoteBranch]: AiOutlineCloud,
+  [RefType.Tag]: AiOutlineTag,
 };
 
 const ITEM_HEIGHT = 30;
@@ -33,11 +46,9 @@ const COMMIT_BORDER = 2; // Extra around the gravatar
 const MERGE_RADIUS = 5;
 const GRAPH_MARGIN = 3;
 
-const activeId$ = state(refs$.pipe(map((refs) => refs.head)));
-
 export function RepoGrid() {
   const commits = readState(commits$, null);
-  const activeId = readState(activeId$, null);
+  const activeId = readState(activeCommit$, null);
 
   const getMaxWidth = createMemo(() => {
     const position =
@@ -67,6 +78,7 @@ export function RepoGrid() {
               [classes.activeCommitRow]: item.commit.id === activeId(),
             })
           }
+          onRowClick={(item) => setActiveCommit(item.commit.id)}
         >
           <Column
             width={getInitialWidth()}
@@ -99,7 +111,7 @@ let BASE_COLOR = 150;
 const getColor = (i: number) => `hsl(${BASE_COLOR + i * 53}, 100%, 75%)`;
 
 const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
-  const activeId = readState(activeId$, null);
+  const activeId = readState(activeCommit$, null);
   let ref!: HTMLCanvasElement;
 
   createEffect(() => {
@@ -128,9 +140,9 @@ const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
   );
 };
 
-const commitRefs$ = state(
-  (id: string) => refs$.pipe(map((refs) => refs.lookup[id] || [])),
-  []
+const commitRefGroups$ = state(
+  (id: string) => refsLookup$.pipe(map((refs) => refs[id] || {})),
+  {}
 );
 const isDetachedHead$ = state(
   (id: string) =>
@@ -138,8 +150,48 @@ const isDetachedHead$ = state(
   false
 );
 
+const RemoteTagIcon = (props: { refs: RemoteRef[] }) => {
+  const [anchor, setAnchor] = createSignal<HTMLDivElement>();
+
+  useTippy(anchor, {
+    hidden: true,
+    props: {
+      content: props.refs.map((ref) => ref.remote).join(", "),
+    },
+  });
+
+  return (
+    <Dynamic
+      ref={setAnchor}
+      class={classes.refTagIcon}
+      component={icons[RefType.RemoteBranch]}
+    />
+  );
+};
+
+const TagIcon = (props: { type: RefType; refs: LookedUpRef[] }) => {
+  if (props.type === RefType.RemoteBranch) {
+    return (
+      <RemoteTagIcon refs={props.refs.map((ref) => ref.ref as RemoteRef)} />
+    );
+  }
+
+  return <Dynamic class={classes.refTagIcon} component={icons[props.type]} />;
+};
+
+const TagGroup = (props: { group: RefGroup }) => {
+  return (
+    <div class={classes.refTag}>
+      <div class={classes.refTagName}>{props.group.name}</div>
+      <For each={Object.entries(props.group.refs)}>
+        {([type, refs]) => <TagIcon type={type as RefType} refs={refs} />}
+      </For>
+    </div>
+  );
+};
+
 const CommitRefs = (props: { id: string }) => {
-  const refs = readParametricState(commitRefs$, () => props.id);
+  const refGroups = readParametricState(commitRefGroups$, () => props.id);
   const isDetachedHead = readParametricState(isDetachedHead$, () => props.id);
 
   return (
@@ -150,18 +202,8 @@ const CommitRefs = (props: { id: string }) => {
           <FaSolidHorseHead class={classes.refTagIcon} />
         </div>
       ) : null}
-      <For each={refs()}>
-        {(ref) => (
-          <div class={classes.refTag}>
-            <div class={classes.refTagName}>
-              {ref.type === "Head" ? null : ref.payload.name}
-            </div>
-            <Dynamic class={classes.refTagIcon} component={icons[ref.type]} />
-            <Show when={ref.type === "LocalBranch" && ref.payload.is_head}>
-              <FaSolidHorseHead class={classes.refTagIcon} />
-            </Show>
-          </div>
-        )}
+      <For each={Object.values(refGroups())}>
+        {(refGroup) => <TagGroup group={refGroup} />}
       </For>
     </div>
   );
