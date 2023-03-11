@@ -34,7 +34,13 @@ export const refsLookup$ = refs$.pipeState(
       type: RefType.Head,
       ref: { id: refs.head, is_head: true, name: "HEAD" },
     };
-    if (!refs.activeBranch) {
+    if (refs.activeBranch) {
+      const activeGroup = getRefGroup(
+        refs.activeBranch.id,
+        refs.activeBranch.name
+      );
+      activeGroup.refs[RefType.Head] = [headRef];
+    } else {
       const headGroup = getRefGroup(refs.head, "HEAD");
       headGroup.refs[RefType.Head] = [headRef];
     }
@@ -65,15 +71,6 @@ export const refsLookup$ = refs$.pipeState(
         ref: tag,
       });
     });
-
-    // We have this here instead that at the top because this way we get Head icon on the right-hand side
-    if (refs.activeBranch) {
-      const activeGroup = getRefGroup(
-        refs.activeBranch.id,
-        refs.activeBranch.name
-      );
-      activeGroup.refs[RefType.Head] = [headRef];
-    }
 
     return result;
   })

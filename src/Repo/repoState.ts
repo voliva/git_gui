@@ -19,6 +19,7 @@ import {
   Observable,
   ObservableInput,
   share,
+  skip,
   startWith,
   Subscription,
   switchMap,
@@ -110,11 +111,19 @@ export const isFetching$ = state(
 );
 
 const shouldUpdateRepo$ = defer(() => repoEvents$).pipe(
-  filter((v) => v.paths.some((path) => path.includes(".git/refs"))),
+  filter((v) =>
+    v.paths.some(
+      (path) => path.includes(".git/refs") || path.endsWith(".git/HEAD")
+    )
+  ),
   connect((shared$) =>
     hasFocus$.pipe(
+      skip(1),
       switchMap((hasFocus) =>
-        shared$.pipe(debounceTime(hasFocus ? 100 : 10_000))
+        shared$.pipe(
+          debounceTime(hasFocus ? 100 : 2_000),
+          hasFocus ? startWith(null) : (v) => v
+        )
       )
     )
   ),

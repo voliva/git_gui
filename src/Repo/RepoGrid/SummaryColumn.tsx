@@ -43,11 +43,6 @@ const commitRefGroups$ = state(
   (id: string) => refsLookup$.pipe(map((refs) => refs[id] || {})),
   {}
 );
-const isDetachedHead$ = state(
-  (id: string) =>
-    refs$.pipe(map((refs) => refs.head === id && refs.activeBranch === null)),
-  false
-);
 
 const RemoteTagIcon = (props: { refs: RemoteRef[] }) => {
   const [anchor, setAnchor] = createSignal<HTMLDivElement>();
@@ -81,26 +76,19 @@ const TagIcon = (props: { type: RefType; refs: LookedUpRef[] }) => {
 const TagGroup = (props: { group: RefGroup }) => {
   return (
     <div class={classes.refTag}>
-      <div class={classes.refTagName}>{props.group.name}</div>
       <For each={Object.entries(props.group.refs)}>
         {([type, refs]) => <TagIcon type={type as RefType} refs={refs} />}
       </For>
+      <div class={classes.refTagName}>{props.group.name}</div>
     </div>
   );
 };
 
 const CommitRefs = (props: { id: string }) => {
   const refGroups = readParametricState(commitRefGroups$, () => props.id);
-  const isDetachedHead = readParametricState(isDetachedHead$, () => props.id);
 
   return (
     <div class={classes.commitRefs}>
-      {isDetachedHead() ? (
-        <div class={classes.refTag}>
-          <div class={classes.refTagName}>HEAD</div>
-          <FaSolidHorseHead class={classes.refTagIcon} />
-        </div>
-      ) : null}
       <For each={Object.values(refGroups())}>
         {(refGroup) => <TagGroup group={refGroup} />}
       </For>
