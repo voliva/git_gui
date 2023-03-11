@@ -1,5 +1,5 @@
 import { map } from "rxjs";
-import { LocalRef, refs$, RefType, RemoteRef } from "./repoState";
+import { LocalRef, refs$, RefType, RemoteRef } from "../repoState";
 
 // e.g. { "abcdef1234": {...} }
 export type RefsLookup = Record<string, RefGroups>;
