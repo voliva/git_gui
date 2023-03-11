@@ -28,6 +28,7 @@
     "classnames": "^2.3.2",
     "rxjs": "^7.8.0",
     "solid-icons": "^1.0.4",
-    "solid-js": "^1.4.7"
+    "solid-js": "^1.4.7",
+    "solid-tippy": "^0.2.1"
   }
 }

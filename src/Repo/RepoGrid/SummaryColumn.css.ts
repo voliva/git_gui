@@ -1,29 +1,18 @@
-import { globalStyle, style } from "@vanilla-extract/css";
-import { itemContainer } from "@/components/Grid/Grid.css";
+import { style } from "@vanilla-extract/css";
+import { repoGridRow } from "./RepoGrid.css";
 
-export const repoGrid = style({
+export const summaryCell = style({
   flex: "1 1 auto",
-});
-
-export const repoGridRow = style({
-  cursor: "pointer",
-  ":hover": {
-    zIndex: 1, // Above other rows,
-    contain: "none !important",
-  },
-});
-
-export const commitGraph = style({
-  flex: "0 0 100%",
-});
-
-export const commitCell = style({
-  flex: "1 1 auto",
+  width: "100%",
   padding: "0px 0.2rem",
   display: "flex",
   alignItems: "center",
   gap: "0.2rem",
   maxHeight: "100%",
+});
+
+export const summaryHeader = style({
+  padding: "0px 0.2rem",
 });
 
 export const commitSummary = style({
@@ -35,7 +24,7 @@ export const commitSummary = style({
 
 export const commitRefs = style({
   flex: "0 0 auto",
-  width: "80px",
+  width: "120px",
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -53,8 +42,7 @@ export const refTag = style({
   background: "white",
   color: "black",
   borderRadius: 5,
-  padding: "0.2rem 0.4rem",
-  paddingRight: "0.1rem",
+  padding: "0.2rem",
   alignItems: "center",
   gap: "0.2rem",
   maxWidth: "100%",
@@ -96,25 +84,4 @@ export const refTagName = style({
 });
 export const refTagIcon = style({
   flex: "0 0 auto",
-});
-
-export const activeCommitBgColor = "#101040";
-export const activeCommitRow = style({
-  background: activeCommitBgColor,
-});
-
-export const commitHeader = style({
-  padding: "0px 0.2rem",
-});
-
-export const hoverBgColor = "#444444";
-export const highlightOnHover = style({
-  selectors: {
-    [`${itemContainer}:hover &`]: {
-      backgroundColor: hoverBgColor,
-    },
-    [`${itemContainer}${activeCommitRow}:hover &`]: {
-      backgroundColor: activeCommitBgColor,
-    },
-  },
 });

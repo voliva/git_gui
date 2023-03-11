@@ -1,47 +1,21 @@
-import { CellRendererProps, Column, Grid } from "@/components/Grid";
-import { readParametricState, readState } from "@/rxState";
+import { CellRendererProps, Column } from "@/components/Grid";
+import { readState } from "@/rxState";
 import { appBgColor } from "@/style.css";
-import { state } from "@react-rxjs/core";
-import classNames from "classnames";
-import { map } from "rxjs";
-import { createEffect, createMemo, For, Show, ValidComponent } from "solid-js";
+import { createEffect, createMemo } from "solid-js";
+import { activeCommit$, BranchPath, PositionedCommit } from "../repoState";
+import { ITEM_HEIGHT } from "./itemHeight";
 import * as classes from "./RepoGrid.css";
-import { hoverBgColor } from "./RepoGrid.css";
-import {
-  BranchPath,
-  commits$,
-  PositionedCommit,
-  refs$,
-  RustRef,
-} from "./repoState";
-import { AiOutlineCloud } from "solid-icons/ai";
-import { FaRegularHardDrive } from "solid-icons/fa";
-import { AiOutlineTag } from "solid-icons/ai";
-import { FaSolidHorseHead } from "solid-icons/fa";
-import { Dynamic } from "solid-js/web";
+import { activeCommitBgColor, hoverBgColor } from "./RepoGrid.css";
 
-const icons: Record<RustRef["type"], ValidComponent> = {
-  Head: FaSolidHorseHead,
-  LocalBranch: FaRegularHardDrive,
-  RemoteBranch: AiOutlineCloud,
-  Tag: AiOutlineTag,
-};
-
-const ITEM_HEIGHT = 30;
 const COMMIT_RADIUS = 10;
 const COMMIT_BORDER = 2; // Extra around the gravatar
 const MERGE_RADIUS = 5;
 const GRAPH_MARGIN = 3;
 
-const activeId$ = state(refs$.pipe(map((refs) => refs.head)));
-
-export function RepoGrid() {
-  const commits = readState(commits$, null);
-  const activeId = readState(activeId$, null);
-
+export const GraphColumn = (props: { commits: PositionedCommit[] | null }) => {
   const getMaxWidth = createMemo(() => {
     const position =
-      commits()
+      props.commits
         ?.flatMap((positioned) => [
           positioned.position,
           ...positioned.paths.map((path) => path.payload),
@@ -49,45 +23,19 @@ export function RepoGrid() {
         .reduce((a, b) => Math.max(a, b)) ?? 0;
     return getPositionMaxX(position + 1); // Add one to account for gradient
   });
-
-  const getInitialWidth = () => {
-    return Math.min(getPositionX(3), getMaxWidth());
-  };
+  const getInitialWidth = () => Math.min(getPositionX(3), getMaxWidth());
 
   return (
-    <>
-      {commits() ? (
-        <Grid
-          class={classes.repoGrid}
-          items={commits()!}
-          // -1: we need a bit of an overlap, otherwise sometimes there's a glitch where the lines look segmented.
-          itemSize={{ height: ITEM_HEIGHT - 1 }}
-          itemClass={(item) =>
-            classNames(classes.repoGridRow, {
-              [classes.activeCommitRow]: item.commit.id === activeId(),
-            })
-          }
-        >
-          <Column
-            width={getInitialWidth()}
-            minWidth={COMMIT_RADIUS * 2 + GRAPH_MARGIN * 2}
-            maxWidth={getMaxWidth()}
-            itemClass={classes.highlightOnHover}
-          >
-            {GraphCell}
-          </Column>
-          <Column
-            header="Commit"
-            headerClass={classes.commitHeader}
-            itemClass={classes.highlightOnHover}
-          >
-            {CommitCell}
-          </Column>
-        </Grid>
-      ) : null}
-    </>
+    <Column
+      width={getInitialWidth()}
+      minWidth={COMMIT_RADIUS * 2 + GRAPH_MARGIN * 2}
+      maxWidth={getMaxWidth()}
+      itemClass={classes.highlightOnHover}
+    >
+      {GraphCell}
+    </Column>
   );
-}
+};
 
 let BASE_COLOR = 150;
 
@@ -99,7 +47,7 @@ let BASE_COLOR = 150;
 const getColor = (i: number) => `hsl(${BASE_COLOR + i * 53}, 100%, 75%)`;
 
 const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
-  const activeId = readState(activeId$, null);
+  const activeId = readState(activeCommit$, null);
   let ref!: HTMLCanvasElement;
 
   createEffect(() => {
@@ -125,54 +73,6 @@ const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
       class={classes.commitGraph}
       ref={ref}
     />
-  );
-};
-
-const commitRefs$ = state(
-  (id: string) => refs$.pipe(map((refs) => refs.lookup[id] || [])),
-  []
-);
-const isDetachedHead$ = state(
-  (id: string) =>
-    refs$.pipe(map((refs) => refs.head === id && refs.activeBranch === null)),
-  false
-);
-
-const CommitRefs = (props: { id: string }) => {
-  const refs = readParametricState(commitRefs$, () => props.id);
-  const isDetachedHead = readParametricState(isDetachedHead$, () => props.id);
-
-  return (
-    <div class={classes.commitRefs}>
-      {isDetachedHead() ? (
-        <div class={classes.refTag}>
-          <div class={classes.refTagName}>HEAD</div>
-          <FaSolidHorseHead class={classes.refTagIcon} />
-        </div>
-      ) : null}
-      <For each={refs()}>
-        {(ref) => (
-          <div class={classes.refTag}>
-            <div class={classes.refTagName}>
-              {ref.type === "Head" ? null : ref.payload.name}
-            </div>
-            <Dynamic class={classes.refTagIcon} component={icons[ref.type]} />
-            <Show when={ref.type === "LocalBranch" && ref.payload.is_head}>
-              <FaSolidHorseHead class={classes.refTagIcon} />
-            </Show>
-          </div>
-        )}
-      </For>
-    </div>
-  );
-};
-
-const CommitCell = (props: CellRendererProps<PositionedCommit>) => {
-  return (
-    <div class={classes.commitCell}>
-      <CommitRefs id={props.item.commit.id} />
-      <div class={classes.commitSummary}>{props.item.commit.summary}</div>
-    </div>
   );
 };
 
@@ -269,7 +169,7 @@ function drawGradient(
   const xStart = width - COMMIT_RADIUS * 3;
   const grd = ctx.createLinearGradient(xStart, 0, width + 5, 0);
   const bgColor = isActive
-    ? classes.activeCommitBgColor
+    ? activeCommitBgColor
     : isHovering
     ? hoverBgColor
     : appBgColor;
