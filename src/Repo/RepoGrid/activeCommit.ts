@@ -34,54 +34,62 @@ export function getIsActive(
   activeId: string,
   cache: Record<string, boolean>,
   commits: Record<string, PositionedCommit>,
-  targetId: string,
-  direction: number
+  targetId: string
 ): boolean {
   if (targetId === activeId) return true;
   if (targetId in cache) return cache[targetId];
 
   const activeCommitTime = commits[activeId].commit.time;
-  const targetCommit = commits[targetId];
-  const parents = targetCommit.commit.parents.filter(
-    (id) => commits[id].commit.time >= activeCommitTime
-  );
-  const descendants = targetCommit.descendants.filter(
-    (id) => commits[id].commit.time <= activeCommitTime
-  );
 
-  if (direction === 0 && targetCommit.commit.time === activeCommitTime) {
-    const result =
-      parents.some((id) => getIsActive(activeId, cache, commits, id, 0)) ||
-      descendants.some((id) => getIsActive(activeId, cache, commits, id, 0));
-    cache[targetId] = result;
-    // console.log(targetId.substring(0, 6), "both", result);
-    return result;
-  }
-  if (direction >= 0 && targetCommit.commit.time >= activeCommitTime) {
-    const result = parents.some((id) =>
-      getIsActive(activeId, cache, commits, id, 1)
+  function searchUp(targetId: string, persist: boolean) {
+    if (targetId === activeId) return true;
+    if (targetId in cache) return cache[targetId];
+
+    const targetCommit = commits[targetId];
+    const descendants = targetCommit.descendants.filter(
+      (id) => commits[id].commit.time <= activeCommitTime
     );
-    cache[targetId] = result;
-    // console.log(targetId.substring(0, 6), "parents", result);
+
+    const result = descendants.some((id) => searchUp(id, persist));
+    // console.log("descendants", targetId, descendants, result);
+    if (persist && targetCommit.commit.parents.length <= 1) {
+      // TODO why parents and not descendants?
+      // Is there a test I can make this fail because it has more than 1 descendant, but only 1 parent?
+      cache[targetId] = result;
+    }
     return result;
   }
-  if (direction <= 0 && targetCommit.commit.time <= activeCommitTime) {
-    const result = descendants.some((id) =>
-      getIsActive(activeId, cache, commits, id, -1)
+  function searchDown(targetId: string, persist: boolean) {
+    if (targetId === activeId) return true;
+    if (targetId in cache) return cache[targetId];
+
+    const targetCommit = commits[targetId];
+    const parents = targetCommit.commit.parents.filter(
+      (id) => commits[id].commit.time >= activeCommitTime
     );
-    cache[targetId] = result;
-    // console.log(targetId.substring(0, 6), "descendants", result);
+
+    const result = parents.some((id) => searchDown(id, persist));
+    if (persist && targetCommit.commit.parents.length <= 1) {
+      cache[targetId] = result;
+    }
     return result;
   }
-  // console.log(
-  //   targetId.substring(0, 6),
-  //   "nomatch",
-  //   direction,
-  //   targetCommit.commit.time,
-  //   activeCommitTime
-  // );
-  cache[targetId] = false;
-  return false;
+
+  const targetCommit = commits[targetId];
+
+  if (targetCommit.commit.time < activeCommitTime) {
+    // console.log("searchUp", targetId);
+    return searchUp(targetId, true);
+  }
+  if (targetCommit.commit.time > activeCommitTime) {
+    // console.log("searchDown", targetId);
+    return searchDown(targetId, true);
+  }
+
+  // console.log("searchBoth", targetId);
+  const result = searchUp(targetId, false) || searchDown(targetId, false);
+
+  return result;
 }
 
 export const isRelatedToActive$ = state(
@@ -91,7 +99,7 @@ export const isRelatedToActive$ = state(
       commits: commitLookup$,
     }).pipe(
       map(({ cache, commits }) =>
-        getIsActive(cache.id, cache.relatedLookup, commits, id, 0)
+        getIsActive(cache.id, cache.relatedLookup, commits, id)
       )
     )
 );

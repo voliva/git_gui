@@ -47,7 +47,7 @@ describe("activeCommit", () => {
       D: { parent: "E", time: 7 },
       E: { parent: "G", time: 6 },
       F: { parent: "G", time: 5 },
-      G: { parent: [], time: 5 },
+      G: { parent: [], time: 4 },
     });
 
     it("works from the top", () => {
@@ -111,7 +111,7 @@ describe("activeCommit", () => {
     });
   });
 
-  describe.skip("duplicate time", () => {
+  describe("duplicate time", () => {
     const lookup = createLookup({
       A: { parent: "B", time: 10 },
       B: { parent: "D", time: 9 },
@@ -155,7 +155,7 @@ describe("activeCommit", () => {
     });
   });
 
-  describe.skip("duplicate time with merges", () => {
+  describe("duplicate time with merges", () => {
     const lookup = createLookup({
       A: { parent: "B", time: 10 },
       B: { parent: ["C", "E"], time: 9 },
@@ -246,21 +246,24 @@ function testCache(
   testCases: Record<string, boolean>
 ) {
   // Test individually
-  Object.entries(testCases).forEach(([targetId, result]) =>
+  Object.entries(testCases).forEach(([targetId, result]) => {
+    // const [targetId, result] = Object.entries(testCases)[1];
     expect(
-      getIsActive(activeId, {}, lookup, targetId, 0),
+      getIsActive(activeId, {}, lookup, targetId),
       `${targetId[0]} should be ${result}`
-    ).toBe(result)
-  );
+    ).toBe(result);
+  });
 
   // Test beginning on each one of them
   Object.entries(testCases).forEach((initialCase) => {
+    // const initialCase = Object.entries(testCases)[5];
     const cache: Record<string, boolean> = {};
 
-    getIsActive(activeId, cache, lookup, initialCase[0], 0);
+    getIsActive(activeId, cache, lookup, initialCase[0]);
+    // console.log(cache);
     Object.entries(testCases).forEach((otherCase) => {
       expect(
-        getIsActive(activeId, cache, lookup, otherCase[0], 0),
+        getIsActive(activeId, cache, lookup, otherCase[0]),
         `Starting on ${initialCase[0]}, ${otherCase[0]} should be ${otherCase[1]}`
       ).toBe(otherCase[1]);
     });
