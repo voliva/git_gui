@@ -2,7 +2,8 @@ import { CellRendererProps, Column } from "@/components/Grid";
 import { readState } from "@/rxState";
 import { appBgColor } from "@/style.css";
 import { createEffect, createMemo } from "solid-js";
-import { activeCommit$, BranchPath, PositionedCommit } from "../repoState";
+import { BranchPath, PositionedCommit } from "../repoState";
+import { activeCommit$ } from "./activeCommit";
 import { ITEM_HEIGHT } from "./itemHeight";
 import * as classes from "./RepoGrid.css";
 import { activeCommitBgColor, hoverBgColor } from "./RepoGrid.css";
@@ -134,7 +135,7 @@ async function drawCommit(
   ctx.arc(
     centerX,
     centerY,
-    positionedCommit.commit.is_merge
+    positionedCommit.commit.parents.length > 1
       ? MERGE_RADIUS
       : COMMIT_RADIUS + COMMIT_BORDER,
     0,
@@ -143,7 +144,7 @@ async function drawCommit(
   ctx.fillStyle = `hsl(${color}, 100%, 60%)`;
   ctx.fill();
 
-  if (!positionedCommit.commit.is_merge) {
+  if (positionedCommit.commit.parents.length === 1) {
     const imgOrPromise = getGravatarImage(hash);
     const img = "then" in imgOrPromise ? await imgOrPromise : imgOrPromise;
     if (positionedCommit !== positionedCommitGetter()) {

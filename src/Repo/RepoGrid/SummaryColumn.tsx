@@ -1,14 +1,16 @@
 import { CellRendererProps, Column } from "@/components/Grid";
 import { readParametricState } from "@/rxState";
 import { state } from "@react-rxjs/core";
+import classNames from "classnames";
 import { map } from "rxjs";
 import { AiOutlineCloud, AiOutlineTag } from "solid-icons/ai";
 import { FaRegularHardDrive, FaSolidHorseHead } from "solid-icons/fa";
 import { createSignal, For, ValidComponent } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { className, Dynamic } from "solid-js/web";
 import { useTippy } from "solid-tippy";
 import "tippy.js/dist/tippy.css";
 import { PositionedCommit, refs$, RefType, RemoteRef } from "../repoState";
+import { isRelatedToActive$ } from "./activeCommit";
 import { LookedUpRef, RefGroup, refsLookup$ } from "./refsLookup";
 import * as gridClasses from "./RepoGrid.css";
 import * as classes from "./SummaryColumn.css";
@@ -24,8 +26,18 @@ export const SummaryColumn = () => (
 );
 
 const SummaryCell = (props: CellRendererProps<PositionedCommit>) => {
+  const isRelated = readParametricState(
+    isRelatedToActive$,
+    () => props.item.commit.id,
+    false
+  );
+
   return (
-    <div class={classes.summaryCell}>
+    <div
+      class={classNames(classes.summaryCell, {
+        [classes.unrelatedCell]: !isRelated(),
+      })}
+    >
       <CommitRefs id={props.item.commit.id} />
       <div class={classes.commitSummary}>{props.item.commit.summary}</div>
     </div>

@@ -57,7 +57,7 @@ export interface CommitInfo {
   id: string;
   summary: string | null;
   body: string | null;
-  is_merge: boolean;
+  parents: string[];
   time: number; // epoch seconds
   author: SignatureInfo;
   committer: SignatureInfo;
@@ -70,6 +70,7 @@ export interface BranchPath {
 
 export interface PositionedCommit {
   commit: CommitInfo;
+  descendants: Array<string>;
   position: number;
   color: number;
   paths: Array<BranchPath>;
@@ -134,6 +135,17 @@ export const commits$ = repo_path$.pipeState(
   switchMap((path) =>
     shouldUpdateRepo$.pipe(losslessExhaustMap(() => getCommits$(path!)))
   )
+);
+
+export const commitLookup$ = commits$.pipeState(
+  map((commits) => {
+    const result: Record<string, PositionedCommit> = {};
+    commits.forEach(
+      (positionedCommit) =>
+        (result[positionedCommit.commit.id] = positionedCommit)
+    );
+    return result;
+  })
 );
 
 export interface LocalRef {
@@ -213,17 +225,6 @@ export const refs$ = repo_path$.pipeState(
 
     return result;
   })
-);
-
-export const [commitChange$, setActiveCommit] = createSignal<string>();
-export const activeCommit$ = state(
-  concat(
-    refs$.pipe(
-      map((refs) => refs.head),
-      take(1)
-    ),
-    commitChange$
-  )
 );
 
 enum AccessMode {

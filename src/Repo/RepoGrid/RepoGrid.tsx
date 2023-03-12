@@ -1,7 +1,8 @@
 import { Grid } from "@/components/Grid";
 import { readState } from "@/rxState";
 import classNames from "classnames";
-import { activeCommit$, commits$, setActiveCommit } from "../repoState";
+import { commits$ } from "../repoState";
+import { activeCommit$, setActiveCommit } from "./activeCommit";
 import { GraphColumn } from "./GraphColumn";
 import { ITEM_HEIGHT } from "./itemHeight";
 import * as classes from "./RepoGrid.css";

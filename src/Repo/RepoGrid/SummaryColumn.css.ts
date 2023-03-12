@@ -11,6 +11,10 @@ export const summaryCell = style({
   maxHeight: "100%",
 });
 
+export const unrelatedCell = style({
+  opacity: 0.6,
+});
+
 export const summaryHeader = style({
   padding: "0px 0.2rem",
 });

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use git2::{Commit, Error, Oid, Repository, Revwalk, Signature, Sort};
 use itertools::Itertools;
 use memoize::memoize;
@@ -33,7 +35,7 @@ pub struct CommitInfo {
     pub summary: Option<String>,
     pub body: Option<String>,
     pub time: i64,
-    pub is_merge: bool,
+    pub parents: Vec<String>,
     pub author: SignatureInfo,
     pub committer: SignatureInfo,
 }
@@ -45,7 +47,7 @@ impl CommitInfo {
             summary: commit.summary().map(|v| v.to_owned()),
             body: commit.body().map(|v| v.to_owned()),
             time: commit.time().seconds(),
-            is_merge: commit.parent_count() > 1,
+            parents: commit.parent_ids().map(|id| id.to_string()).collect_vec(),
             author: SignatureInfo::new(&commit.author()),
             committer: SignatureInfo::new(&commit.committer()),
         }
@@ -64,6 +66,7 @@ pub enum BranchPath {
 #[derive(Debug, Serialize)]
 pub struct PositionedCommit {
     pub commit: CommitInfo,
+    pub descendants: Vec<String>,
     pub position: usize,
     pub paths: Vec<BranchPath>,
 }
@@ -73,6 +76,7 @@ where
     I: Iterator<Item = Commit<'a>>,
 {
     branches: Vec<Option<Oid>>,
+    descendants: HashMap<String, Vec<String>>,
     underlying: I,
 }
 
@@ -83,6 +87,7 @@ trait PositionCommit<'a>: Iterator<Item = Commit<'a>> {
     {
         CommitPositioner {
             branches: vec![],
+            descendants: HashMap::new(),
             underlying: self,
         }
     }
@@ -212,9 +217,29 @@ where
             }
         }
 
+        commit.parent_ids().for_each(|parent| {
+            self.descendants
+                .entry(parent.to_string())
+                .or_insert_with(|| vec![])
+                .push(commit.id().to_string());
+        });
+
+        let descendants = self
+            .descendants
+            .remove(&commit.id().to_string())
+            .unwrap_or(vec![]);
+
+        if commit.id().to_string().starts_with("4fdec4") {
+            println!("4fdec4 {:?}", commit.parent_ids().collect_vec());
+        }
+        if commit.id().to_string().starts_with("1aff80") {
+            println!("1aff80 {:?}", descendants);
+        }
+
         Some(PositionedCommit {
             commit: CommitInfo::new(&commit),
             position,
+            descendants,
             paths,
         })
     }
