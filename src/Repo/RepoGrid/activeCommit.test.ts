@@ -157,7 +157,7 @@ describe("activeCommit", () => {
 
   describe("duplicate time with merges", () => {
     const lookup = createLookup({
-      A: { parent: "B", time: 10 },
+      A: { parent: "B", time: 9 },
       B: { parent: ["C", "E"], time: 9 },
       C: { parent: "D", time: 9 },
       D: { parent: "F", time: 9 },
@@ -263,7 +263,7 @@ function testCache(
     // console.log(cache);
     Object.entries(testCases).forEach((otherCase) => {
       expect(
-        getIsActive(activeId, cache, lookup, otherCase[0]),
+        getIsActive(activeId, Object.assign({}, cache), lookup, otherCase[0]),
         `Starting on ${initialCase[0]}, ${otherCase[0]} should be ${otherCase[1]}`
       ).toBe(otherCase[1]);
     });

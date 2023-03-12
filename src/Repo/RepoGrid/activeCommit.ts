@@ -41,35 +41,37 @@ export function getIsActive(
 
   const activeCommitTime = commits[activeId].commit.time;
 
-  function searchUp(targetId: string, persist: boolean) {
+  function searchUp(targetId: string) {
     if (targetId === activeId) return true;
-    if (targetId in cache) return cache[targetId];
 
     const targetCommit = commits[targetId];
+    if (targetId in cache && targetCommit.commit.time !== activeCommitTime)
+      return cache[targetId];
+
     const descendants = targetCommit.descendants.filter(
       (id) => commits[id].commit.time <= activeCommitTime
     );
 
-    const result = descendants.some((id) => searchUp(id, persist));
+    const result = descendants.some(searchUp);
     // console.log("descendants", targetId, descendants, result);
-    if (persist && targetCommit.commit.parents.length <= 1) {
-      // TODO why parents and not descendants?
-      // Is there a test I can make this fail because it has more than 1 descendant, but only 1 parent?
+    if (result) {
       cache[targetId] = result;
     }
     return result;
   }
-  function searchDown(targetId: string, persist: boolean) {
+  function searchDown(targetId: string) {
     if (targetId === activeId) return true;
-    if (targetId in cache) return cache[targetId];
 
     const targetCommit = commits[targetId];
+    if (targetId in cache && targetCommit.commit.time !== activeCommitTime)
+      return cache[targetId];
+
     const parents = targetCommit.commit.parents.filter(
       (id) => commits[id].commit.time >= activeCommitTime
     );
 
-    const result = parents.some((id) => searchDown(id, persist));
-    if (persist && targetCommit.commit.parents.length <= 1) {
+    const result = parents.some(searchDown);
+    if (result) {
       cache[targetId] = result;
     }
     return result;
@@ -79,15 +81,15 @@ export function getIsActive(
 
   if (targetCommit.commit.time < activeCommitTime) {
     // console.log("searchUp", targetId);
-    return searchUp(targetId, true);
+    return searchUp(targetId);
   }
   if (targetCommit.commit.time > activeCommitTime) {
     // console.log("searchDown", targetId);
-    return searchDown(targetId, true);
+    return searchDown(targetId);
   }
 
   // console.log("searchBoth", targetId);
-  const result = searchUp(targetId, false) || searchDown(targetId, false);
+  const result = searchUp(targetId) || searchDown(targetId);
 
   return result;
 }
