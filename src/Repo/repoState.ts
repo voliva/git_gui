@@ -31,7 +31,7 @@ import {
 export const [triggerOpen$, openRepo] = createSignal();
 export const repo_path$ = state(
   concat(
-    from(invoke<string | null>("get_last_repo")),
+    defer(() => invoke<string | null>("get_last_repo")),
     merge(
       triggerOpen$.pipe(
         switchMap(() => invoke<string | null>("open_repo")),

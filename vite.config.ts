@@ -1,3 +1,5 @@
+/// <reference types="vitest" />
+
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import path from "path";
 import { defineConfig } from "vite";
@@ -29,4 +31,5 @@ export default defineConfig({
     // produce sourcemaps for debug builds
     sourcemap: !!process.env.TAURI_DEBUG,
   },
+  test: {},
 });
