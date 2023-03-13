@@ -1,10 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { itemContainer } from "@/components/Grid/Grid.css";
 
-export const repoGrid = style({
-  flex: "1 1 auto",
-});
-
 export const repoGridRow = style({
   cursor: "pointer",
   ":hover": {

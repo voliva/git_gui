@@ -19,13 +19,6 @@ export const summaryHeader = style({
   padding: "0px 0.2rem",
 });
 
-export const commitSummary = style({
-  flex: "1 1 auto",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-});
-
 export const commitRefs = style({
   flex: "0 0 auto",
   width: "120px",
@@ -78,14 +71,4 @@ export const refTag = style({
       opacity: 1,
     },
   },
-});
-
-export const refTagName = style({
-  flex: "1 1 auto",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-});
-export const refTagIcon = style({
-  flex: "0 0 auto",
 });

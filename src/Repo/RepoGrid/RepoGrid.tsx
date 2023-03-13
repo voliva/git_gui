@@ -1,4 +1,5 @@
 import { Grid } from "@/components/Grid";
+import { boxFill } from "@/quickStyles.css";
 import { readState } from "@/rxState";
 import classNames from "classnames";
 import { commits$ } from "../repoState";
@@ -16,7 +17,7 @@ export function RepoGrid() {
     <>
       {commits() ? (
         <Grid
-          class={classes.repoGrid}
+          class={boxFill}
           items={commits()!}
           // -1: we need a bit of an overlap, otherwise sometimes there's a glitch where the lines look segmented.
           itemSize={{ height: ITEM_HEIGHT - 1 }}

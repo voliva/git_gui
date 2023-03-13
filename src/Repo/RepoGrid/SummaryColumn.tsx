@@ -1,4 +1,5 @@
 import { CellRendererProps, Column } from "@/components/Grid";
+import { qs } from "@/quickStyles";
 import { readParametricState } from "@/rxState";
 import { state } from "@react-rxjs/core";
 import classNames from "classnames";
@@ -6,10 +7,10 @@ import { map } from "rxjs";
 import { AiOutlineCloud, AiOutlineTag } from "solid-icons/ai";
 import { FaRegularHardDrive, FaSolidHorseHead } from "solid-icons/fa";
 import { createSignal, For, ValidComponent } from "solid-js";
-import { className, Dynamic } from "solid-js/web";
+import { Dynamic } from "solid-js/web";
 import { useTippy } from "solid-tippy";
 import "tippy.js/dist/tippy.css";
-import { PositionedCommit, refs$, RefType, RemoteRef } from "../repoState";
+import { PositionedCommit, RefType, RemoteRef } from "../repoState";
 import { isRelatedToActive$ } from "./activeCommit";
 import { LookedUpRef, RefGroup, refsLookup$ } from "./refsLookup";
 import * as gridClasses from "./RepoGrid.css";
@@ -39,7 +40,9 @@ const SummaryCell = (props: CellRendererProps<PositionedCommit>) => {
       })}
     >
       <CommitRefs id={props.item.commit.id} />
-      <div class={classes.commitSummary}>{props.item.commit.summary}</div>
+      <div class={qs("boxFill", "textEllipsis")}>
+        {props.item.commit.summary}
+      </div>
     </div>
   );
 };
@@ -69,7 +72,7 @@ const RemoteTagIcon = (props: { refs: RemoteRef[] }) => {
   return (
     <Dynamic
       ref={setAnchor}
-      class={classes.refTagIcon}
+      class={qs("boxAuto")}
       component={icons[RefType.RemoteBranch]}
     />
   );
@@ -82,7 +85,7 @@ const TagIcon = (props: { type: RefType; refs: LookedUpRef[] }) => {
     );
   }
 
-  return <Dynamic class={classes.refTagIcon} component={icons[props.type]} />;
+  return <Dynamic class={qs("boxAuto")} component={icons[props.type]} />;
 };
 
 const TagGroup = (props: { group: RefGroup }) => {
@@ -91,7 +94,7 @@ const TagGroup = (props: { group: RefGroup }) => {
       <For each={Object.entries(props.group.refs)}>
         {([type, refs]) => <TagIcon type={type as RefType} refs={refs} />}
       </For>
-      <div class={classes.refTagName}>{props.group.name}</div>
+      <div class={qs("boxFill", "textEllipsis")}>{props.group.name}</div>
     </div>
   );
 };
