@@ -23,6 +23,14 @@ export const boxAuto = style({
   flex: "0 0 auto",
 });
 
+export const boxSplit = style({
+  flex: "1 1 100%",
+});
+
 export const noOverflow = style({
   overflow: "hidden",
+});
+
+export const overflowAuto = style({
+  overflow: "auto",
 });

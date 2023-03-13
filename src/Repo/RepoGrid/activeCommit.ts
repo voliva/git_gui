@@ -1,16 +1,6 @@
-import { state, StateObservable } from "@react-rxjs/core";
+import { state } from "@react-rxjs/core";
 import { createSignal } from "@react-rxjs/utils";
-import {
-  combineLatest,
-  concat,
-  finalize,
-  map,
-  Observable,
-  of,
-  switchMap,
-  take,
-  tap,
-} from "rxjs";
+import { combineLatest, concat, map, Observable, take } from "rxjs";
 import { commitLookup$, PositionedCommit, refs$ } from "../repoState";
 
 export const [commitChange$, setActiveCommit] = createSignal<string>();
