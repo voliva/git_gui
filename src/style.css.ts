@@ -47,3 +47,7 @@ globalStyle("a", {
 globalStyle("a:hover", {
   color: "#24c8db",
 });
+
+globalStyle("svg", {
+  outline: "none",
+});

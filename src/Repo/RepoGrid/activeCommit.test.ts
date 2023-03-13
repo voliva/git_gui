@@ -247,7 +247,7 @@ function testCache(
 ) {
   // Test individually
   Object.entries(testCases).forEach(([targetId, result]) => {
-    // const [targetId, result] = Object.entries(testCases)[1];
+    // const [targetId, result] = Object.entries(testCases)[3];
     expect(
       getIsActive(activeId, {}, lookup, targetId),
       `${targetId[0]} should be ${result}`

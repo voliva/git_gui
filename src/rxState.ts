@@ -60,6 +60,7 @@ export function readParametricState<T, A>(
   const arg$ = from(observable(getter));
   const obs$ = arg$.pipe(
     switchMap((arg) => {
+      // console.log("change arg", arg);
       const state$ = getState(arg);
       if ("getDefaultValue" in state$) {
         return state$;
