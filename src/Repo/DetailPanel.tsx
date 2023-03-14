@@ -3,7 +3,7 @@ import { qs } from "@/quickStyles";
 import { readState } from "@/rxState";
 import { waitWithLatestFrom } from "@/tauriRx";
 import { invoke } from "@tauri-apps/api";
-import { of, switchMap } from "rxjs";
+import { EMPTY, of, switchMap } from "rxjs";
 import { AiOutlineCopy } from "solid-icons/ai";
 import { createSignal, For, Show } from "solid-js";
 import * as classes from "./DetailPanel.css";
@@ -29,7 +29,7 @@ const commit$ = activeCommit$.pipeState(
   waitWithLatestFrom(commitLookup$),
   switchMap(([id, commits]) => {
     if (!(id in commits)) {
-      return invoke<CommitInfo>("getCommit", { id }); // TODO
+      return EMPTY;
     }
     return of(commits[id].commit);
   })
