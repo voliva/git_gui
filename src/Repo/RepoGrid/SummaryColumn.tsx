@@ -9,7 +9,6 @@ import { FaRegularHardDrive, FaSolidHorseHead } from "solid-icons/fa";
 import { createSignal, For, ValidComponent } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useTippy } from "solid-tippy";
-import "tippy.js/dist/tippy.css";
 import { PositionedCommit, RefType, RemoteRef } from "../repoState";
 import { isRelatedToActive$ } from "./activeCommit";
 import { LookedUpRef, RefGroup, refsLookup$ } from "./refsLookup";

@@ -15,6 +15,10 @@ export const horizontalFlex = style({
   display: "flex",
 });
 
+export const centeredFlex = style({
+  alignItems: "center",
+});
+
 export const boxFill = style({
   flex: "1 1 auto",
 });
@@ -33,4 +37,8 @@ export const noOverflow = style({
 
 export const overflowAuto = style({
   overflow: "auto",
+});
+
+export const alignRight = style({
+  textAlign: "right",
 });

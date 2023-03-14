@@ -8,7 +8,7 @@ export const FullTabs = (props: { class?: string; children: any }) => {
   const firstTab = (resolved.toArray() as any as FullTabProps[]).find(
     (tab) => tab && !tab.disabled
   );
-  const [activeView, setActiveView] = createSignal(firstTab?.children);
+  const [activeView, setActiveView] = createSignal(firstTab);
 
   return (
     <div class={props.class}>
@@ -18,10 +18,14 @@ export const FullTabs = (props: { class?: string; children: any }) => {
             const props = item as any as FullTabProps | null;
             if (!props) return null;
 
+            const resolved = children(() => props.children);
+
             return (
               <div
-                class={classNames(classes.fullTab)}
-                onClick={() => setActiveView(props.children)}
+                class={classNames(classes.fullTab, {
+                  active: props === activeView(),
+                })}
+                onClick={() => setActiveView(props)}
               >
                 {props.header}
               </div>
@@ -29,7 +33,7 @@ export const FullTabs = (props: { class?: string; children: any }) => {
           }}
         </For>
       </div>
-      {activeView}
+      {activeView()?.children}
     </div>
   );
 };

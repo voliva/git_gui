@@ -51,3 +51,14 @@ globalStyle("a:hover", {
 globalStyle("svg", {
   outline: "none",
 });
+
+globalStyle("h1, h2, h3, h4, h5, p", {
+  margin: "0",
+});
+
+globalStyle(".tippy-box", {
+  background: "#0f0f0f",
+});
+globalStyle(".tippy-arrow", {
+  color: "#0f0f0f",
+});
