@@ -21,7 +21,7 @@ export const GraphColumn = (props: { commits: PositionedCommit[] | null }) => {
           positioned.position,
           ...positioned.paths.map((path) => path.payload),
         ])
-        .reduce((a, b) => Math.max(a, b)) ?? 0;
+        .reduce((a, b) => Math.max(a, b), 0) ?? 0;
     return getPositionMaxX(position + 1); // Add one to account for gradient
   });
   const getInitialWidth = () => Math.min(getPositionX(3), getMaxWidth());

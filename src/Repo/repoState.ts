@@ -1,4 +1,4 @@
-import { listen$ } from "@/tauriRx";
+import { listen$, streamCommand$ } from "@/tauriRx";
 import { state } from "@react-rxjs/core";
 import { createSignal } from "@react-rxjs/utils";
 import { invoke } from "@tauri-apps/api";
@@ -10,6 +10,7 @@ import {
   defer,
   distinctUntilChanged,
   EMPTY,
+  exhaustMap,
   filter,
   finalize,
   from,
@@ -18,13 +19,17 @@ import {
   merge,
   Observable,
   ObservableInput,
+  scan,
   share,
   skip,
   startWith,
   Subscription,
   switchMap,
   take,
+  tap,
+  throttleTime,
   timer,
+  toArray,
   withLatestFrom,
 } from "rxjs";
 
@@ -76,14 +81,6 @@ export interface PositionedCommit {
   paths: Array<BranchPath>;
 }
 
-const INITIAL_PAGE_SIZE = 2000; // Takes about ~100ms
-const getCommits$ = (path: string) => {
-  return invoke<PositionedCommit[]>("get_commits", {
-    path,
-    amount: INITIAL_PAGE_SIZE,
-  });
-};
-
 const hasFocus$ = timer(0, 1000).pipe(
   map(() => document.hasFocus()),
   distinctUntilChanged()
@@ -131,13 +128,57 @@ const shouldUpdateRepo$ = defer(() => repoEvents$).pipe(
   startWith(null)
 );
 
-export const commits$ = repo_path$.pipeState(
+const commitEvent$ = repo_path$.pipe(
   switchMap((path) =>
-    shouldUpdateRepo$.pipe(losslessExhaustMap(() => getCommits$(path!)))
+    shouldUpdateRepo$.pipe(
+      exhaustMap(() =>
+        concat(
+          [{ type: "start" as const }],
+          streamCommand$<PositionedCommit>("get_commits", {
+            path,
+          }).pipe(map((payload) => ({ type: "update" as const, payload }))),
+          [{ type: "end" as const }]
+        )
+      )
+    )
+  ),
+  share()
+);
+
+export const commits$ = state(
+  commitEvent$.pipe(
+    scan(
+      (acc, event) => {
+        switch (event.type) {
+          case "start":
+            return {
+              array: acc.array,
+              i: 0,
+            };
+          case "update":
+            acc.array[acc.i] = event.payload;
+            return {
+              array: acc.array,
+              i: acc.i + 1,
+            };
+          case "end":
+            acc.array.length = acc.i;
+            return acc;
+        }
+      },
+      {
+        array: [] as PositionedCommit[],
+        i: 0,
+      }
+    ),
+    map(({ array }) => array),
+    losslessThrottle(30),
+    map((v) => [...v])
   )
 );
 
 export const commitLookup$ = commits$.pipeState(
+  take(1),
   map((commits) => {
     const result: Record<string, PositionedCommit> = {};
     commits.forEach(
@@ -145,7 +186,20 @@ export const commitLookup$ = commits$.pipeState(
         (result[positionedCommit.commit.id] = positionedCommit)
     );
     return result;
-  })
+  }),
+  switchMap((initialMap) =>
+    commitEvent$.pipe(
+      filter((event) => event.type === "update"),
+      map((event) => {
+        if (event.type !== "update") return initialMap;
+        initialMap[event.payload.commit.id] = event.payload;
+        return initialMap;
+      }),
+      startWith(initialMap)
+    )
+  ),
+  losslessThrottle(30),
+  map((v) => ({ ...v }))
 );
 
 export interface LocalRef {
@@ -327,42 +381,42 @@ function losslessExhaustMap<T, R>(mapFn: (value: T) => ObservableInput<R>) {
     });
 }
 
-// const losslessThrottle =
-//   <T>(timeout: number) =>
-//   (source$: Observable<T>) =>
-//     new Observable<T>((obs) => {
-//       let throttle: NodeJS.Timeout | null = null;
-//       let missed: T | typeof empty = empty;
+function losslessThrottle<T>(timeout: number) {
+  return (source$: Observable<T>) =>
+    new Observable<T>((obs) => {
+      let throttle: NodeJS.Timeout | null = null;
+      let missed: T | typeof empty = empty;
 
-//       const emit = (value: T) => {
-//         throttle = setTimeout(() => {
-//           throttle = null;
+      const emit = (value: T) => {
+        throttle = setTimeout(() => {
+          throttle = null;
 
-//           if (missed !== empty) {
-//             const tmp = missed;
-//             missed = empty;
-//             emit(tmp);
-//           }
-//         }, timeout);
-//         obs.next(value);
-//       };
+          if (missed !== empty) {
+            const tmp = missed;
+            missed = empty;
+            emit(tmp);
+          }
+        }, timeout);
+        obs.next(value);
+      };
 
-//       const sub = source$.subscribe({
-//         next: (v) => {
-//           if (!throttle) {
-//             emit(v);
-//           } else {
-//             missed = v;
-//           }
-//         },
-//         error: (e) => obs.error(e),
-//         complete: () => obs.complete,
-//       });
+      const sub = source$.subscribe({
+        next: (v) => {
+          if (!throttle) {
+            emit(v);
+          } else {
+            missed = v;
+          }
+        },
+        error: (e) => obs.error(e),
+        complete: () => obs.complete,
+      });
 
-//       return () => {
-//         sub.unsubscribe();
-//         if (throttle !== null) {
-//           clearTimeout(throttle);
-//         }
-//       };
-//     });
+      return () => {
+        sub.unsubscribe();
+        if (throttle !== null) {
+          clearTimeout(throttle);
+        }
+      };
+    });
+}

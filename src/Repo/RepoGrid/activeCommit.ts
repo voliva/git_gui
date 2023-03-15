@@ -30,6 +30,8 @@ export function getIsActive(
   if (targetId === activeId) return true;
   if (targetId in cache) return cache[targetId];
 
+  if (!(activeId in commits) || !(targetId in commits)) return false;
+
   const activeCommitTime = commits[activeId].commit.time;
 
   function searchUp(targetId: string, cacheEnabled: boolean) {
