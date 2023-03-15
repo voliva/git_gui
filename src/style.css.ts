@@ -56,6 +56,12 @@ globalStyle("h1, h2, h3, h4, h5, p", {
   margin: "0",
 });
 
+globalStyle("ul, ol", {
+  listStyle: "none",
+  padding: 0,
+  mergin: 0,
+});
+
 globalStyle(".tippy-box", {
   background: "#0f0f0f",
 });

@@ -12,7 +12,7 @@ export const FullTabs = (props: { class?: string; children: any }) => {
 
   return (
     <div class={props.class}>
-      <div class={qs("horizontalFlex", "noOverflow")}>
+      <div class={qs("horizontalFlex", "noOverflow", "boxAuto")}>
         <For each={resolved.toArray()}>
           {(item) => {
             const props = item as any as FullTabProps | null;

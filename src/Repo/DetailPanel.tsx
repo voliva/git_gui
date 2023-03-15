@@ -1,16 +1,29 @@
 import { FullTab, FullTabs } from "@/components/Tabs/FullTabs";
 import { qs } from "@/quickStyles";
 import { readState } from "@/rxState";
-import { waitWithLatestFrom } from "@/tauriRx";
+import { state } from "@react-rxjs/core";
 import { invoke } from "@tauri-apps/api";
-import { EMPTY, of, switchMap } from "rxjs";
+import { writeText } from "@tauri-apps/api/clipboard";
+import {
+  combineLatest,
+  distinctUntilChanged,
+  filter,
+  map,
+  switchMap,
+  tap,
+  withLatestFrom,
+} from "rxjs";
 import { AiOutlineCopy } from "solid-icons/ai";
 import { createSignal, For, Show } from "solid-js";
+import { useTippy } from "solid-tippy";
 import * as classes from "./DetailPanel.css";
 import { activeCommit$, setActiveCommit } from "./RepoGrid/activeCommit";
-import { CommitInfo, commitLookup$, SignatureInfo } from "./repoState";
-import { writeText } from "@tauri-apps/api/clipboard";
-import { useTippy } from "solid-tippy";
+import {
+  CommitInfo,
+  commitLookup$,
+  repo_path$,
+  SignatureInfo,
+} from "./repoState";
 
 export const DetailPanel = () => {
   return (
@@ -25,14 +38,12 @@ export const DetailPanel = () => {
   );
 };
 
-const commit$ = activeCommit$.pipeState(
-  waitWithLatestFrom(commitLookup$),
-  switchMap(([id, commits]) => {
-    if (!(id in commits)) {
-      return EMPTY;
-    }
-    return of(commits[id].commit);
-  })
+const commit$ = state(
+  combineLatest([activeCommit$, commitLookup$]).pipe(
+    filter(([id, commits]) => id in commits),
+    map(([id, commits]) => commits[id].commit),
+    distinctUntilChanged()
+  )
 );
 
 const Details = () => {
@@ -40,7 +51,7 @@ const Details = () => {
 
   return (
     <Show when={commit()}>
-      <div class={qs("boxFill", "verticalFlex")}>
+      <div class={qs("boxFill", "verticalFlex", "noOverflow")}>
         <CommitDetails commit={commit()!} />
         <ActiveCommitChanges />
       </div>
@@ -154,12 +165,91 @@ const CommitLink = (props: { children: string }) => {
   );
 };
 
-const commitChanges$ = activeCommit$.pipe(
-  switchMap((id) => invoke("getCommitChanges", { id }))
+interface File {
+  id: string;
+  path: string;
+}
+
+type FileChange =
+  | { Added: File }
+  | { Copied: [File, File] }
+  | { Deleted: File }
+  | { Renamed: [File, File] }
+  | { Modified: [File, File] };
+
+interface Delta {
+  change: FileChange;
+  binary: boolean;
+}
+
+interface CommitContents {
+  insertions: number;
+  deletions: number;
+  deltas: Array<Delta>;
+}
+
+const commitChanges$ = activeCommit$.pipeState(
+  withLatestFrom(repo_path$),
+  switchMap(([id, path]) => invoke<CommitContents>("get_commit", { path, id }))
 );
 
 const ActiveCommitChanges = () => {
-  return <div class={qs("boxFill", "overflowAuto")}>Commit Changes</div>;
+  const changes = readState(commitChanges$, null);
+
+  return (
+    <Show when={changes()}>
+      <div class={qs("boxFill", "verticalFlex")}>
+        <div class={qs("boxAuto")}>
+          <div>Files changed: {changes()!.deltas.length}</div>
+          <div>
+            +{changes()!.insertions} -{changes()!.insertions}
+          </div>
+        </div>
+        <div class={qs("boxFill", "overflowVertical")}>
+          <ul>
+            <For each={changes()!.deltas}>
+              {(delta) => <DeltaSummary delta={delta} />}
+            </For>
+          </ul>
+        </div>
+      </div>
+    </Show>
+  );
+};
+
+const DeltaSummary = (props: { delta: Delta }) => {
+  const getFile = () => {
+    const delta = props.delta;
+    if ("Added" in delta.change) {
+      return delta.change.Added;
+    }
+    if ("Copied" in delta.change) {
+      return delta.change.Copied[1];
+    }
+    if ("Deleted" in delta.change) {
+      return delta.change.Deleted;
+    }
+    if ("Renamed" in delta.change) {
+      return delta.change.Renamed[1];
+    }
+    // if ('Modified' in delta.change) {
+    return delta.change.Modified[1];
+    // }
+  };
+  const splitFile = () => {
+    const path = getFile().path;
+    const lastSlash = path.lastIndexOf("/");
+    return lastSlash >= 0
+      ? [path.slice(0, lastSlash), path.slice(lastSlash)]
+      : ["", path];
+  };
+
+  return (
+    <li class={qs("horizontalFlex", "noOverflow")}>
+      <span class={classes.filePathDirectory}>{splitFile()[0]}</span>
+      <span class={classes.filePathName}>{splitFile()[1]}</span>
+    </li>
+  );
 };
 
 const WorkingDirectory = () => {

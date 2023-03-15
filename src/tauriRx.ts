@@ -50,12 +50,7 @@ export const streamCommand$ = <T>(
             startWith(0)
           ),
           request$,
-        ]).pipe(
-          filter(([v, messages]) => {
-            console.log(v, messages);
-            return v === messages;
-          })
-        )
+        ]).pipe(filter(([v, messages]) => v === messages))
       ),
       finalize(() => messages$.complete())
     );

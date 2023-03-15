@@ -1,4 +1,4 @@
-import { boxAuto } from "@/quickStyles.css";
+import { boxAuto, textEllipsis } from "@/quickStyles.css";
 import { style } from "@vanilla-extract/css";
 
 export const detailPanelContainer = style({
@@ -36,3 +36,16 @@ export const commitAuthor = style({
   padding: "0.2rem 0.5rem",
   gap: "0.5rem",
 });
+
+export const filePathDirectory = style([
+  textEllipsis,
+  {
+    flex: "0 1000 auto",
+  },
+]);
+export const filePathName = style([
+  textEllipsis,
+  {
+    flex: "1 0.001 auto",
+  },
+]);

@@ -39,6 +39,11 @@ export const overflowAuto = style({
   overflow: "auto",
 });
 
+export const overflowVertical = style({
+  overflowX: "clip",
+  overflowY: "auto",
+});
+
 export const alignRight = style({
   textAlign: "right",
 });
