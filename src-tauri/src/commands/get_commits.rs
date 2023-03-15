@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::positioned_commit::get_positioned_commits;
 use crate::timer::Timer;
 use git2::Repository;
@@ -26,8 +28,12 @@ pub fn get_commits(
     let response_channel = format!("get_commits-stream-{correlation_id}");
     let mut timer = Timer::new();
     let result = get_positioned_commits(&repo)
-        .map(|x| {
+        .enumerate()
+        .map(|(i, x)| {
             window.emit(&response_channel, &x).ok();
+            if i % 50 == 0 {
+                std::thread::sleep(Duration::from_millis(20));
+            }
             x
         })
         .count();
