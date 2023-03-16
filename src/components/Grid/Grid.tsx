@@ -4,7 +4,7 @@ import {
   VirtualItemSize,
 } from "@minht11/solid-virtual-container";
 import { ReactiveWeakMap } from "@solid-primitives/map";
-import { children, createSignal, For, JSXElement, Show } from "solid-js";
+import { children, createSignal, For, JSX, JSXElement, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import * as classes from "./Grid.css";
 import classNames from "classnames";
@@ -16,6 +16,7 @@ export const Grid = <T extends any>(props: {
   children: any;
   itemClass?: (item: T) => string | null | undefined;
   onRowClick?: (item: T) => void;
+  onKeyDown?: JSX.EventHandlerUnion<HTMLDivElement, KeyboardEvent>;
 }) => {
   const resolved = children(() => props.children);
   /**
@@ -118,6 +119,7 @@ export const Grid = <T extends any>(props: {
         [props.class || ""]: Boolean(props.class),
       }}
       ref={scrollTargetElement}
+      onKeyDown={props.onKeyDown}
     >
       <div class={classes.headerContainer}>{getHeaders()}</div>
       <VirtualContainer

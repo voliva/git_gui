@@ -10,9 +10,6 @@ export const gridContainer = style({
   WebkitUserSelect: "none",
   msOverflowStyle: "none",
   scrollbarWidth: "none",
-  "::-webkit-scrollbar": {
-    display: "none",
-  },
 });
 
 export const headerContainer = style({

@@ -1,5 +1,10 @@
-import { boxAuto, textEllipsis } from "@/quickStyles.css";
-import { style } from "@vanilla-extract/css";
+import {
+  boxAuto,
+  boxFill,
+  textEllipsis,
+  verticalFlex,
+} from "@/quickStyles.css";
+import { style, styleVariants } from "@vanilla-extract/css";
 
 export const detailPanelContainer = style({
   display: "flex",
@@ -37,15 +42,61 @@ export const commitAuthor = style({
   gap: "0.5rem",
 });
 
+export const commitChangeContainer = style([
+  boxFill,
+  verticalFlex,
+  {
+    padding: "0 0.5rem",
+    overflow: "hidden",
+  },
+]);
+
+const positiveColor = "#a0ffa0";
+const negativeColor = "#ffa0a0";
+export const insertions = style({
+  color: positiveColor,
+  marginLeft: "0.5rem",
+});
+export const deletions = style({
+  color: negativeColor,
+  marginRight: "0.5rem",
+});
+export const infographicBg = style({
+  width: 50,
+  height: 5,
+  overflow: "hidden",
+  backgroundColor: "#6f6f6f",
+});
+const infographicFgBase = style({
+  height: "100%",
+});
+export const infographicFg = styleVariants({
+  insertion: [
+    infographicFgBase,
+    {
+      backgroundColor: positiveColor,
+    },
+  ],
+  deletion: [
+    infographicFgBase,
+    {
+      float: "right",
+      backgroundColor: negativeColor,
+    },
+  ],
+});
+
 export const filePathDirectory = style([
   textEllipsis,
   {
-    flex: "0 1000 auto",
+    flex: "1 1 0%",
+    maxWidth: "fit-content",
+    minWidth: "3rem",
   },
 ]);
 export const filePathName = style([
   textEllipsis,
   {
-    flex: "1 0.001 auto",
+    flex: "0 1 auto",
   },
 ]);

@@ -14,6 +14,28 @@ export function RepoGrid() {
   const commits = readState(commits$, null);
   const activeId = readState(activeCommit$, null);
 
+  const selectNextCommit = (evt: KeyboardEvent) => {
+    let dir = 0;
+    if (evt.code === "ArrowUp") {
+      dir = -1;
+    } else if (evt.code === "ArrowDown") {
+      dir = 1;
+    } else {
+      return;
+    }
+
+    const id = activeId();
+    const commitList = commits();
+    const currentIdx =
+      commitList?.findIndex((commit) => commit.commit.id === id) ?? -1;
+    if (currentIdx >= 0) {
+      const nextId = commitList![currentIdx + dir].commit.id;
+      if (nextId) {
+        setActiveCommit(nextId);
+      }
+    }
+  };
+
   return (
     <Show when={commits()} fallback={<div class={boxFill} />}>
       <Grid
@@ -27,6 +49,7 @@ export function RepoGrid() {
           })
         }
         onRowClick={(item) => setActiveCommit(item.commit.id)}
+        onKeyDown={selectNextCommit}
       >
         <GraphColumn commits={commits()} />
         <SummaryColumn />

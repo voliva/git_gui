@@ -6,8 +6,9 @@ export const appForeground = createVar();
 export const appBgColor = "#2f2f2f";
 
 globalStyle(":root", {
-  fontFamily: "Inter, Avenir, Helvetica, Arial, sans-serif",
-  fontSize: "16px",
+  fontFamily:
+    "ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace",
+  fontSize: "14px",
   lineHeight: "24px",
   fontWeight: "400",
 
@@ -59,7 +60,7 @@ globalStyle("h1, h2, h3, h4, h5, p", {
 globalStyle("ul, ol", {
   listStyle: "none",
   padding: 0,
-  mergin: 0,
+  margin: 0,
 });
 
 globalStyle(".tippy-box", {
@@ -67,4 +68,16 @@ globalStyle(".tippy-box", {
 });
 globalStyle(".tippy-arrow", {
   color: "#0f0f0f",
+});
+
+globalStyle("::-webkit-scrollbar", {
+  width: 7,
+});
+globalStyle("::-webkit-scrollbar-track", {
+  background: "transparent",
+});
+globalStyle("::-webkit-scrollbar-thumb", {
+  backgroundColor: "rgba(155, 155, 155, 0.5)",
+  borderRadius: 20,
+  border: "transparent",
 });

@@ -9,6 +9,7 @@ export const summaryCell = style({
   alignItems: "center",
   gap: "0.2rem",
   maxHeight: "100%",
+  overflow: "hidden", // Needed, otherwise on hover with overflow an horizontal scroll shows up
 });
 
 export const unrelatedCell = style({

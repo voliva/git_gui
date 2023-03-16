@@ -8,7 +8,9 @@ import {
   combineLatest,
   distinctUntilChanged,
   filter,
+  from,
   map,
+  startWith,
   switchMap,
   tap,
   withLatestFrom,
@@ -190,7 +192,11 @@ interface CommitContents {
 
 const commitChanges$ = activeCommit$.pipeState(
   withLatestFrom(repo_path$),
-  switchMap(([id, path]) => invoke<CommitContents>("get_commit", { path, id }))
+  switchMap(([id, path]) =>
+    from(invoke<CommitContents>("get_commit", { path, id })).pipe(
+      startWith(null)
+    )
+  )
 );
 
 const ActiveCommitChanges = () => {
@@ -198,13 +204,8 @@ const ActiveCommitChanges = () => {
 
   return (
     <Show when={changes()}>
-      <div class={qs("boxFill", "verticalFlex")}>
-        <div class={qs("boxAuto")}>
-          <div>Files changed: {changes()!.deltas.length}</div>
-          <div>
-            +{changes()!.insertions} -{changes()!.insertions}
-          </div>
-        </div>
+      <div class={classes.commitChangeContainer}>
+        <ChangeCount changes={changes()!} />
         <div class={qs("boxFill", "overflowVertical")}>
           <ul>
             <For each={changes()!.deltas}>
@@ -214,6 +215,43 @@ const ActiveCommitChanges = () => {
         </div>
       </div>
     </Show>
+  );
+};
+
+const ChangeCount = (props: { changes: CommitContents }) => {
+  const getWidth = (value: number) => {
+    const maxAmount = Math.max(
+      100,
+      props.changes.deletions,
+      props.changes.insertions
+    );
+    return Math.round((1000 * value) / maxAmount) / 10 + "%";
+  };
+
+  return (
+    <div class={qs("boxAuto", "horizontalFlex")}>
+      <div class={qs("boxFill")}>Files: {props.changes.deltas.length}</div>
+      <div class={qs("horizontalFlex", "centeredFlex")}>
+        <span class={classes.deletions}>{props.changes.deletions}</span>
+        <div class={classes.infographicBg}>
+          <div
+            class={classes.infographicFg.deletion}
+            style={{
+              width: getWidth(props.changes.deletions),
+            }}
+          />
+        </div>
+        <div class={classes.infographicBg}>
+          <div
+            class={classes.infographicFg.insertion}
+            style={{
+              width: getWidth(props.changes.insertions),
+            }}
+          />
+        </div>
+        <span class={classes.insertions}>{props.changes.insertions}</span>
+      </div>
+    </div>
   );
 };
 
@@ -244,12 +282,23 @@ const DeltaSummary = (props: { delta: Delta }) => {
       : ["", path];
   };
 
-  return (
-    <li class={qs("horizontalFlex", "noOverflow")}>
-      <span class={classes.filePathDirectory}>{splitFile()[0]}</span>
-      <span class={classes.filePathName}>{splitFile()[1]}</span>
-    </li>
-  );
+  return () => {
+    const [path, name] = splitFile();
+
+    return (
+      <li class={qs("horizontalFlex", "noOverflow")}>
+        <span
+          class={classes.filePathDirectory}
+          style={{
+            "min-width": Math.min(3, path.length) + "rem",
+          }}
+        >
+          {path}
+        </span>
+        <span class={classes.filePathName}>{name}</span>
+      </li>
+    );
+  };
 };
 
 const WorkingDirectory = () => {
