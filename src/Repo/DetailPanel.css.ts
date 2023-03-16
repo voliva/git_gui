@@ -5,12 +5,13 @@ import {
   verticalFlex,
 } from "@/quickStyles.css";
 import { style, styleVariants } from "@vanilla-extract/css";
+import { hoverBgColor } from "./RepoGrid/RepoGrid.css";
 
 export const detailPanelContainer = style({
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-  width: "20rem",
+  width: "21rem",
   paddingLeft: "5px",
   borderLeft: "1px solid darkgray",
 });
@@ -51,8 +52,11 @@ export const commitChangeContainer = style([
   },
 ]);
 
-const positiveColor = "#a0ffa0";
-const negativeColor = "#ffa0a0";
+export const positiveColor = "#a0ffa0";
+export const changeColor = "#ffd050";
+export const neutralColor = "#a0a0ff";
+export const negativeColor = "#ffa0a0";
+
 export const insertions = style({
   color: positiveColor,
   marginLeft: "0.5rem",
@@ -84,6 +88,21 @@ export const infographicFg = styleVariants({
       backgroundColor: negativeColor,
     },
   ],
+});
+
+export const changeLine = style({
+  display: "flex",
+  overflow: "hidden",
+  alignItems: "center",
+  padding: "0.2rem",
+  cursor: "pointer",
+  ":hover": {
+    background: hoverBgColor,
+  },
+});
+export const changeIcon = style({
+  display: "inline-flex",
+  marginRight: "0.5rem",
 });
 
 export const filePathDirectory = style([

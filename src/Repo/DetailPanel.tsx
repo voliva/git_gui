@@ -15,10 +15,24 @@ import {
   tap,
   withLatestFrom,
 } from "rxjs";
-import { AiOutlineCopy } from "solid-icons/ai";
-import { createSignal, For, Show } from "solid-js";
+import { AiOutlineCopy, AiOutlineFileAdd } from "solid-icons/ai";
+import {
+  OcFileadded2,
+  OcFilediff2,
+  OcFilemoved2,
+  OcFileremoved2,
+  OcFilesymlinkfile2,
+} from "solid-icons/oc";
+import { createSignal, For, JSX, Show } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import { useTippy } from "solid-tippy";
 import * as classes from "./DetailPanel.css";
+import {
+  changeColor,
+  negativeColor,
+  neutralColor,
+  positiveColor,
+} from "./DetailPanel.css";
 import { activeCommit$, setActiveCommit } from "./RepoGrid/activeCommit";
 import {
   CommitInfo,
@@ -255,25 +269,77 @@ const ChangeCount = (props: { changes: CommitContents }) => {
   );
 };
 
+function switchChangeType<T>(
+  value: FileChange,
+  options: Record<
+    "Added" | "Copied" | "Deleted" | "Renamed" | "Modified",
+    (content: File[]) => T
+  >
+): T;
+function switchChangeType<T>(
+  value: FileChange,
+  options: Partial<
+    Record<
+      "Added" | "Copied" | "Deleted" | "Renamed" | "Modified",
+      (content: File[]) => T
+    >
+  >,
+  defaultValue: T
+): T;
+function switchChangeType<T>(
+  value: FileChange,
+  options: Partial<
+    Record<
+      "Added" | "Copied" | "Deleted" | "Renamed" | "Modified",
+      (content: File[]) => T
+    >
+  >,
+  defaultValue?: T
+): T {
+  if ("Added" in value && options.Added) {
+    return options.Added([value.Added]);
+  }
+  if ("Copied" in value && options.Copied) {
+    return options.Copied(value.Copied);
+  }
+  if ("Deleted" in value && options.Deleted) {
+    return options.Deleted([value.Deleted]);
+  }
+  if ("Renamed" in value && options.Renamed) {
+    return options.Renamed(value.Renamed);
+  }
+  if ("Modified" in value && options.Modified) {
+    return options.Modified(value.Modified);
+  }
+  return defaultValue!;
+}
+
 const DeltaSummary = (props: { delta: Delta }) => {
-  const getFile = () => {
-    const delta = props.delta;
-    if ("Added" in delta.change) {
-      return delta.change.Added;
-    }
-    if ("Copied" in delta.change) {
-      return delta.change.Copied[1];
-    }
-    if ("Deleted" in delta.change) {
-      return delta.change.Deleted;
-    }
-    if ("Renamed" in delta.change) {
-      return delta.change.Renamed[1];
-    }
-    // if ('Modified' in delta.change) {
-    return delta.change.Modified[1];
-    // }
-  };
+  const getFile = () =>
+    switchChangeType(props.delta.change, {
+      Added: ([v]) => v,
+      Copied: ([, v]) => v,
+      Deleted: ([v]) => v,
+      Renamed: ([, v]) => v,
+      Modified: ([, v]) => v,
+    });
+  const getIcon = () =>
+    switchChangeType(props.delta.change, {
+      Added: () => OcFileadded2,
+      Copied: () => OcFilesymlinkfile2,
+      Deleted: () => OcFileremoved2,
+      Renamed: () => OcFilemoved2,
+      Modified: () => OcFilediff2,
+    });
+  const getStyle = () =>
+    switchChangeType(props.delta.change, {
+      Added: () => positiveColor,
+      Copied: () => neutralColor,
+      Deleted: () => negativeColor,
+      Renamed: () => neutralColor,
+      Modified: () => changeColor,
+    });
+
   const splitFile = () => {
     const path = getFile().path;
     const lastSlash = path.lastIndexOf("/");
@@ -282,15 +348,31 @@ const DeltaSummary = (props: { delta: Delta }) => {
       : ["", path];
   };
 
+  const [anchor, setAnchor] = createSignal<HTMLDivElement>();
+
+  useTippy(anchor, {
+    hidden: true,
+    props: {
+      content: () => {
+        const file = getFile();
+        return file.path;
+      },
+      placement: "left",
+    },
+  });
+
   return () => {
     const [path, name] = splitFile();
 
     return (
-      <li class={qs("horizontalFlex", "noOverflow")}>
+      <li class={classes.changeLine} ref={setAnchor}>
+        <span class={classes.changeIcon} style={{ color: getStyle() }}>
+          <Dynamic component={getIcon()} />
+        </span>
         <span
           class={classes.filePathDirectory}
           style={{
-            "min-width": Math.min(3, path.length) + "rem",
+            "min-width": Math.min(3, path.length * 0.6) + "rem",
           }}
         >
           {path}

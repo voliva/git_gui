@@ -69,6 +69,9 @@ globalStyle(".tippy-box", {
 globalStyle(".tippy-arrow", {
   color: "#0f0f0f",
 });
+globalStyle(".tippy-content", {
+  wordBreak: "break-word",
+});
 
 globalStyle("::-webkit-scrollbar", {
   width: 7,
