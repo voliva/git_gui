@@ -1,6 +1,7 @@
 import { FullTab, FullTabs } from "@/components/Tabs/FullTabs";
 import { qs } from "@/quickStyles";
 import { readState } from "@/rxState";
+import { listen$ } from "@/tauriRx";
 import { state } from "@react-rxjs/core";
 import { invoke } from "@tauri-apps/api";
 import { writeText } from "@tauri-apps/api/clipboard";
@@ -10,6 +11,7 @@ import {
   filter,
   from,
   map,
+  merge,
   startWith,
   switchMap,
   tap,
@@ -23,7 +25,7 @@ import {
   OcFileremoved2,
   OcFilesymlinkfile2,
 } from "solid-icons/oc";
-import { createSignal, For, JSX, Show } from "solid-js";
+import { createEffect, createSignal, For, JSX, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useTippy } from "solid-tippy";
 import * as classes from "./DetailPanel.css";
@@ -314,7 +316,7 @@ function switchChangeType<T>(
   return defaultValue!;
 }
 
-const DeltaSummary = (props: { delta: Delta }) => {
+const DeltaSummary = (props: { delta: Delta; children?: JSX.Element }) => {
   const getFile = () =>
     switchChangeType(props.delta.change, {
       Added: ([v]) => v,
@@ -378,11 +380,66 @@ const DeltaSummary = (props: { delta: Delta }) => {
           {path}
         </span>
         <span class={classes.filePathName}>{name}</span>
+        {props.children}
       </li>
     );
   };
 };
 
+interface WorkingDirStatus {
+  unstaged_deltas: Delta[];
+  staged_deltas: Delta[];
+}
+
+const workingDirectory$ = state(
+  merge(
+    listen$<WorkingDirStatus>("working-directory").pipe(
+      map((evt) => evt.payload)
+    ),
+    repo_path$.pipe(
+      switchMap((path) => invoke<WorkingDirStatus>("get_working_dir", { path }))
+    )
+  ).pipe(tap((v) => console.log("received event", v)))
+);
+
 const WorkingDirectory = () => {
-  return <div class={qs("boxFill", "verticalFlex")}>Working dir</div>;
+  const result = readState(workingDirectory$);
+
+  return (
+    <div class={qs("boxFill", "verticalFlex")}>
+      <StagingList
+        title="Unstaged changes"
+        deltas={result()?.unstaged_deltas ?? []}
+      />
+      <StagingList
+        title="Staged changes"
+        deltas={result()?.staged_deltas ?? []}
+        checked
+      />
+    </div>
+  );
+};
+
+const StagingList = (props: {
+  title: string;
+  deltas: Delta[];
+  checked?: boolean;
+}) => {
+  return (
+    <div>
+      <div class={qs("horizontalFlex")}>
+        <div>{props.title}</div>
+        <input type="checkbox" checked={props.checked} />
+      </div>
+      <ul class={qs("overflowVertical")}>
+        <For each={props.deltas}>
+          {(delta) => (
+            <DeltaSummary delta={delta}>
+              <input type="checkbox" checked={props.checked} />
+            </DeltaSummary>
+          )}
+        </For>
+      </ul>
+    </div>
+  );
 };

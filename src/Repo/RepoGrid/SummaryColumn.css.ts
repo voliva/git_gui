@@ -4,12 +4,12 @@ import { repoGridRow } from "./RepoGrid.css";
 export const summaryCell = style({
   flex: "1 1 auto",
   width: "100%",
+  maxWidth: "calc(100% - 10px)",
   padding: "0px 0.2rem",
   display: "flex",
   alignItems: "center",
   gap: "0.2rem",
   maxHeight: "100%",
-  overflow: "hidden", // Needed, otherwise on hover with overflow an horizontal scroll shows up
 });
 
 export const unrelatedCell = style({

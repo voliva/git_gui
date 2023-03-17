@@ -1,13 +1,19 @@
-use std::{path::Path, sync::mpsc::channel, thread};
-
-use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
-use tauri::{State, Window};
-
+use super::read_working_dir;
 use crate::AppState;
+use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
+use std::{
+    path::Path,
+    sync::{mpsc::channel, Arc, Mutex},
+    thread,
+    time::Duration,
+};
+use tauri::{State, Window};
 
 #[tauri::command(async)]
 pub fn watch_repo(path: String, state: State<AppState>, window: Window) {
     let (tx, rx) = channel();
+    let (tx_end, rx_end) = channel();
+    let needs_update = Arc::new(Mutex::new(false));
 
     let mut watcher = RecommendedWatcher::new(tx, Config::default()).unwrap();
 
@@ -15,11 +21,44 @@ pub fn watch_repo(path: String, state: State<AppState>, window: Window) {
         .watch(Path::new(&path), RecursiveMode::Recursive)
         .unwrap();
 
+    let watcher_nu = needs_update.clone();
+    let watcher_wnd = window.clone();
     thread::spawn(move || {
         for msg in rx {
             if let Ok(event) = msg {
-                window.emit("watcher_notification", &event).ok();
+                watcher_wnd.emit("watcher_notification", &event).ok();
+                watcher_nu
+                    .lock()
+                    .and_then(|mut nu| {
+                        *nu = true;
+                        Ok(())
+                    })
+                    .ok();
             }
+        }
+        tx_end.send(()).ok();
+    });
+
+    thread::spawn(move || loop {
+        thread::sleep(Duration::from_secs(1));
+        let needs_update = needs_update
+            .lock()
+            .map(|mut nu| {
+                let result = bool::clone(&*nu);
+                *nu = false;
+                return result;
+            })
+            .unwrap_or(false);
+
+        if needs_update {
+            println!("needs_update");
+            if let Ok(status) = read_working_dir(&path) {
+                window.emit("working-directory", &status).ok();
+            }
+        }
+
+        if let Ok(_) = rx_end.try_recv() {
+            break;
         }
     });
 

@@ -9,7 +9,8 @@ mod settings;
 mod timer;
 
 use crate::commands::{
-    fetch, get_commit, get_commits, get_last_repo, get_refs, open_repo, stop_watch_repo, watch_repo,
+    fetch, get_commit, get_commits, get_last_repo, get_refs, get_working_dir, open_repo,
+    stop_watch_repo, watch_repo,
 };
 use notify::RecommendedWatcher;
 use std::{sync::Mutex, thread};
@@ -28,6 +29,7 @@ fn main() {
             get_commits,
             get_last_repo,
             get_refs,
+            get_working_dir,
             open_repo,
             stop_watch_repo,
             watch_repo

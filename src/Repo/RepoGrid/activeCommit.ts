@@ -1,16 +1,25 @@
 import { state } from "@react-rxjs/core";
 import { createSignal } from "@react-rxjs/utils";
-import { combineLatest, concat, map, Observable, take } from "rxjs";
-import { commitLookup$, PositionedCommit, refs$ } from "../repoState";
+import { combineLatest, concat, map, Observable, switchMap, take } from "rxjs";
+import {
+  commitLookup$,
+  PositionedCommit,
+  refs$,
+  repo_path$,
+} from "../repoState";
 
 export const [commitChange$, setActiveCommit] = createSignal<string>();
 export const activeCommit$ = state(
-  concat(
-    refs$.pipe(
-      map((refs) => refs.head),
-      take(1)
-    ),
-    commitChange$
+  repo_path$.pipe(
+    switchMap(() =>
+      concat(
+        refs$.pipe(
+          map((refs) => refs.head),
+          take(1)
+        ),
+        commitChange$
+      )
+    )
   )
 );
 

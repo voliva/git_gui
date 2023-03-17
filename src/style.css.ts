@@ -5,9 +5,11 @@ export const appForeground = createVar();
 
 export const appBgColor = "#2f2f2f";
 
+// https://github.com/vjpr/monaco-bold
+// https://stackoverflow.com/a/62755574/1026619
 globalStyle(":root", {
   fontFamily:
-    "ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace",
+    "Monaco, ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace",
   fontSize: "14px",
   lineHeight: "24px",
   fontWeight: "400",
@@ -75,6 +77,7 @@ globalStyle(".tippy-content", {
 
 globalStyle("::-webkit-scrollbar", {
   width: 7,
+  height: 7,
 });
 globalStyle("::-webkit-scrollbar-track", {
   background: "transparent",
