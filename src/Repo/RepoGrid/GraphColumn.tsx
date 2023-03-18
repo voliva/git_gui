@@ -10,6 +10,7 @@ import { activeCommitBgColor, hoverBgColor } from "./RepoGrid.css";
 
 const COMMIT_RADIUS = 10;
 const COMMIT_BORDER = 2; // Extra around the gravatar
+const NO_IMAGE_RADIUS = 8;
 const MERGE_RADIUS = 5;
 const GRAPH_MARGIN = 3;
 
@@ -132,19 +133,15 @@ async function drawCommit(
   const centerY = ITEM_HEIGHT / 2;
   const hash = positionedCommit.commit.author.hash ?? NO_ONE;
   const color = getAuthorColor(hash);
-  ctx.arc(
-    centerX,
-    centerY,
-    positionedCommit.commit.parents.length > 1
-      ? MERGE_RADIUS
-      : COMMIT_RADIUS + COMMIT_BORDER,
-    0,
-    2 * Math.PI
-  );
-  ctx.fillStyle = `hsl(${color}, 100%, 60%)`;
-  ctx.fill();
+  const drawBackground = (radius: number) => {
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.fillStyle = `hsl(${color}, 100%, 60%)`;
+    ctx.fill();
+  };
 
   if (positionedCommit.commit.parents.length === 1) {
+    // Initially keep the commit circle small in case the image can't be loaded.
+    drawBackground(NO_IMAGE_RADIUS);
     const imgOrPromise = getGravatarImage(hash);
     const img = "then" in imgOrPromise ? await imgOrPromise : imgOrPromise;
     if (positionedCommit !== positionedCommitGetter()) {
@@ -152,12 +149,17 @@ async function drawCommit(
       // If we continue, we would be drawing an old image on a new version of the canvas.
       return;
     }
+
+    // Extend it with the border
+    drawBackground(COMMIT_RADIUS + COMMIT_BORDER);
     ctx.save();
     ctx.beginPath();
     ctx.arc(centerX, centerY, COMMIT_RADIUS, 0, 2 * Math.PI);
     ctx.clip();
     ctx.drawImage(img, centerX - COMMIT_RADIUS, centerY - COMMIT_RADIUS);
     ctx.restore();
+  } else {
+    drawBackground(MERGE_RADIUS);
   }
 }
 
