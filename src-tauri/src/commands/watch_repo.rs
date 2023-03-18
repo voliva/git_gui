@@ -51,7 +51,6 @@ pub fn watch_repo(path: String, state: State<AppState>, window: Window) {
             .unwrap_or(false);
 
         if needs_update {
-            println!("needs_update");
             if let Ok(status) = read_working_dir(&path) {
                 window.emit("working-directory", &status).ok();
             }

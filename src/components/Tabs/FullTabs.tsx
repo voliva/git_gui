@@ -18,8 +18,6 @@ export const FullTabs = (props: { class?: string; children: any }) => {
             const props = item as any as FullTabProps | null;
             if (!props) return null;
 
-            const resolved = children(() => props.children);
-
             return (
               <div
                 class={classNames(classes.fullTab, {

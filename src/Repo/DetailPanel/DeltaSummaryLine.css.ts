@@ -15,6 +15,7 @@ export const changeLine = style({
   display: "flex",
   overflow: "hidden",
   alignItems: "center",
+  justifyContent: "space-between",
   padding: "0.2rem",
   cursor: "pointer",
   ":hover": {

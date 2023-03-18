@@ -19,6 +19,10 @@ export const centeredFlex = style({
   alignItems: "center",
 });
 
+export const spaceBetweenFlex = style({
+  justifyContent: "space-between",
+});
+
 export const boxFill = style({
   flex: "1 1 auto",
 });

@@ -1,3 +1,4 @@
+import { qs } from "@/quickStyles";
 import {
   OcFileadded2,
   OcFilediff2,
@@ -75,18 +76,20 @@ export const DeltaSummary = (props: {
 
     return (
       <li class={classes.changeLine} ref={setAnchor}>
-        <span class={classes.changeIcon} style={{ color: getStyle() }}>
-          <Dynamic component={getIcon()} />
-        </span>
-        <span
-          class={classes.filePathDirectory}
-          style={{
-            "min-width": Math.min(3, path.length * 0.6) + "rem",
-          }}
-        >
-          {path}
-        </span>
-        <span class={classes.filePathName}>{name}</span>
+        <div class={qs("horizontalFlex", "noOverflow", "centeredFlex")}>
+          <span class={classes.changeIcon} style={{ color: getStyle() }}>
+            <Dynamic component={getIcon()} />
+          </span>
+          <span
+            class={classes.filePathDirectory}
+            style={{
+              "min-width": Math.min(3, path.length * 0.6) + "rem",
+            }}
+          >
+            {path}
+          </span>
+          <span class={classes.filePathName}>{name}</span>
+        </div>
         {props.children}
       </li>
     );

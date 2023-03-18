@@ -6,6 +6,7 @@ mod get_refs;
 mod get_working_dir;
 mod open_repo;
 pub mod serializer;
+mod stage_unstage;
 mod watch_repo;
 
 pub use fetch::*;
@@ -15,4 +16,5 @@ pub use get_last_repo::*;
 pub use get_refs::*;
 pub use get_working_dir::*;
 pub use open_repo::*;
+pub use stage_unstage::*;
 pub use watch_repo::*;

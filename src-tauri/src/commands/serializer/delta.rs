@@ -1,14 +1,14 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Debug)]
 pub enum DeltaReadError {
     UnsupportedDeltaType,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct File {
-    id: String,
-    path: String,
+    pub id: String,
+    pub path: String,
 }
 
 impl<'a> From<git2::DiffFile<'a>> for File {
@@ -24,7 +24,7 @@ impl<'a> From<git2::DiffFile<'a>> for File {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub enum FileChange {
     Added(File),
     Untracked(File),
@@ -34,9 +34,9 @@ pub enum FileChange {
     Modified(File, File),
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Delta {
-    change: FileChange,
+    pub change: FileChange,
     binary: bool,
 }
 

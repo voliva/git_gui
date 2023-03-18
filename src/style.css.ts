@@ -4,6 +4,7 @@ export const appBackground = createVar();
 export const appForeground = createVar();
 
 export const appBgColor = "#2f2f2f";
+export const deepBgColor = "#1f1f1f";
 
 // https://github.com/vjpr/monaco-bold
 // https://stackoverflow.com/a/62755574/1026619

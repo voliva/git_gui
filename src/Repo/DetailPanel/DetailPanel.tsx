@@ -14,11 +14,11 @@ import { commitLookup$ } from "../repoState";
 export const DetailPanel = () => {
   return (
     <FullTabs class={classes.detailPanelContainer}>
-      <FullTab header="Details">
-        <Details />
-      </FullTab>
       <FullTab header="Working Directory">
         <WorkingDirectory />
+      </FullTab>
+      <FullTab header="Details">
+        <Details />
       </FullTab>
     </FullTabs>
   );
