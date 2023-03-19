@@ -6,6 +6,7 @@ export const workingDirectory = style({
   display: "flex",
   flexDirection: "column",
   padding: "0.5rem",
+  overflowY: "auto",
 });
 
 export const stagingListContainer = style({
@@ -21,10 +22,41 @@ export const stagingListHeader = style({
   justifyContent: "space-between",
   padding: "0.2rem",
   overflowY: "scroll",
+  userSelect: "none",
 });
 
 export const stagingList = style({
   overflowX: "clip",
   overflowY: "scroll",
   height: "10rem",
+});
+
+export const commitMessageArea = style({
+  backgroundColor: deepBgColor,
+  color: "white",
+  padding: "0.5rem",
+  boxSizing: "border-box",
+  width: "100%",
+  minHeight: "5rem",
+  height: "10rem",
+  maxHeight: "20rem",
+  resize: "vertical",
+  borderRadius: "5px",
+});
+
+export const commitBtn = style({
+  backgroundColor: "darkgreen",
+  color: "white",
+  borderRadius: "5px",
+  marginTop: "1rem",
+  padding: "0.5rem",
+  borderColor: "rgba(118,118,118,0.3)",
+  ":disabled": {
+    opacity: 0.5,
+  },
+});
+
+export const messageLength = style({
+  color: "lightgray",
+  textAlign: "right",
 });
