@@ -1,13 +1,14 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
 use super::serializer::delta::{Delta, FileChange};
-use git2::{IndexAddOption, Repository};
+use git2::{Index, IndexAddOption, IndexEntry, Repository};
 use serde::Serialize;
 
 #[derive(Serialize)]
 pub enum StageError {
     Read(String),
     UnstageError,
+    EntryDoesntExistOnHead,
 }
 
 impl From<git2::Error> for StageError {
@@ -23,25 +24,35 @@ impl From<git2::Error> for StageError {
 pub fn stage(path: String, delta: Option<Delta>) -> Result<(), StageError> {
     let repo = Repository::open(path)?;
 
-    let mut index = repo.index()?;
     if let Some(delta) = delta {
-        let file = match delta.change {
-            FileChange::Added(f) => f,
-            FileChange::Untracked(f) => f,
-            FileChange::Copied(_, f) => f,
-            FileChange::Deleted(f) => f,
-            FileChange::Renamed(_, f) => f,
-            FileChange::Modified(_, f) => f,
-        };
+        match delta.change {
+            FileChange::Untracked(f) => add_from_working_dir(&repo, Some(&f.path)),
+            FileChange::Copied(_, f) => add_from_working_dir(&repo, Some(&f.path)), // TODO check
+            FileChange::Deleted(f) => remove_from_index(&repo, &f.path),
+            FileChange::Renamed(old, new) => {
+                // TODO check
+                remove_from_index(&repo, &old.path)?;
+                add_from_working_dir(&repo, Some(&new.path))
+            }
+            FileChange::Modified(_, f) => add_from_working_dir(&repo, Some(&f.path)),
+            v => unreachable!("unreachable {:?}", v),
+        }
+    } else {
+        add_from_working_dir(&repo, None)
+    }
+}
 
-        index.add_path(&PathBuf::from(file.path))?;
+fn add_from_working_dir(repo: &Repository, path: Option<&str>) -> Result<(), StageError> {
+    let mut index = repo.index()?;
+
+    if let Some(path) = path {
+        index.add_path(&PathBuf::from(path))?;
         index.write()?;
     } else {
         let flag = IndexAddOption::default();
         index.add_all(vec!["*"], flag, None)?;
         index.write()?;
     }
-
     Ok(())
 }
 
@@ -49,27 +60,37 @@ pub fn stage(path: String, delta: Option<Delta>) -> Result<(), StageError> {
 pub fn unstage(path: String, delta: Option<Delta>) -> Result<(), StageError> {
     let repo = Repository::open(path)?;
 
+    if let Some(delta) = delta {
+        match delta.change {
+            FileChange::Added(f) => remove_from_index(&repo, &f.path),
+            FileChange::Copied(_, f) => remove_from_index(&repo, &f.path), // TODO check
+            FileChange::Deleted(f) => recover_index_from_head(&repo, &f.path),
+            FileChange::Renamed(old, new) => {
+                // TODO check
+                recover_index_from_head(&repo, &old.path)?;
+                remove_from_index(&repo, &new.path)
+            }
+            FileChange::Modified(_, f) => reset_index_to_head(&repo, Some(&f.path)),
+            v => unreachable!("unreachable {:?}", v),
+        }
+    } else {
+        reset_index_to_head(&repo, None)
+    }
+}
+
+fn reset_index_to_head(repo: &Repository, path: Option<&str>) -> Result<(), StageError> {
     let mut index = repo.index()?;
     let head = repo.head()?.peel_to_tree()?;
 
-    if let Some(delta) = delta {
-        // TODO check for all types. Atm it works for modified
-        let file = match delta.change {
-            FileChange::Added(f) => f,
-            FileChange::Untracked(f) => f,
-            FileChange::Copied(_, f) => f,
-            FileChange::Deleted(f) => f,
-            FileChange::Renamed(_, f) => f,
-            FileChange::Modified(_, f) => f,
-        };
-
+    if let Some(path) = path {
+        // Reference https://stackoverflow.com/a/35093146/1026619
         let index_entry = index.iter().find(|entry| {
             std::str::from_utf8(&entry.path)
-                .map(|str| str.eq(&file.path))
+                .map(|str| str.eq(path))
                 .unwrap_or(false)
         });
 
-        let tree_entry = head.get_path(&PathBuf::from(file.path))?;
+        let tree_entry = head.get_path(&PathBuf::from(path))?;
         let obj = tree_entry.to_object(&repo)?;
         let blob = obj.as_blob();
 
@@ -85,6 +106,28 @@ pub fn unstage(path: String, delta: Option<Delta>) -> Result<(), StageError> {
         index.read_tree(&head)?;
         index.write()?;
     }
+    Ok(())
+}
 
+fn recover_index_from_head(repo: &Repository, path: &str) -> Result<(), StageError> {
+    let head = repo.head()?.peel_to_tree()?;
+    let mut head_index = Index::new()?;
+    head_index.read_tree(&head)?;
+
+    if let Some(entry) = head_index.get_path(&PathBuf::from(path), 0) {
+        let mut index = repo.index()?;
+        index.add(&entry)?;
+        index.write()?;
+        Ok(())
+    } else {
+        Err(StageError::EntryDoesntExistOnHead)
+    }
+}
+
+fn remove_from_index(repo: &Repository, path: &str) -> Result<(), StageError> {
+    let mut index = repo.index()?;
+
+    index.remove_path(&PathBuf::from(path))?;
+    index.write()?;
     Ok(())
 }

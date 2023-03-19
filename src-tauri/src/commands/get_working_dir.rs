@@ -20,6 +20,7 @@ pub fn read_working_dir(path: &str) -> Result<WorkingDirStatus, git2::Error> {
     let mut options = StatusOptions::new();
     options.include_ignored(false);
     options.include_untracked(true);
+    options.rename_threshold(std::u16::MAX);
 
     let mut status = WorkingDirStatus {
         unstaged_deltas: vec![],

@@ -5,7 +5,7 @@ pub enum DeltaReadError {
     UnsupportedDeltaType,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct File {
     pub id: String,
     pub path: String,
@@ -24,7 +24,7 @@ impl<'a> From<git2::DiffFile<'a>> for File {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum FileChange {
     Added(File),
     Untracked(File),
