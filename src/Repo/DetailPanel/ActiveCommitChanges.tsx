@@ -1,11 +1,11 @@
 import { qs } from "@/quickStyles";
 import { readState } from "@/rxState";
 import { invoke } from "@tauri-apps/api";
-import { from, startWith, switchMap, withLatestFrom } from "rxjs";
+import { filter, from, startWith, switchMap, withLatestFrom } from "rxjs";
 import { For, Show } from "solid-js";
-import * as classes from "./ActiveCommitChanges.css";
 import { activeCommit$ } from "../RepoGrid/activeCommit";
 import { repo_path$ } from "../repoState";
+import * as classes from "./ActiveCommitChanges.css";
 import { DeltaSummary } from "./DeltaSummaryLine";
 
 export interface File {
@@ -33,6 +33,7 @@ interface CommitContents {
 }
 
 const commitChanges$ = activeCommit$.pipeState(
+  filter((v) => v !== null),
   withLatestFrom(repo_path$),
   switchMap(([id, path]) =>
     from(invoke<CommitContents>("get_commit", { path, id })).pipe(

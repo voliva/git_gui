@@ -1,6 +1,14 @@
 import { state } from "@react-rxjs/core";
 import { createSignal } from "@react-rxjs/utils";
-import { combineLatest, concat, map, Observable, switchMap, take } from "rxjs";
+import {
+  combineLatest,
+  concat,
+  filter,
+  map,
+  Observable,
+  switchMap,
+  take,
+} from "rxjs";
 import {
   commitLookup$,
   PositionedCommit,
@@ -24,8 +32,9 @@ export const activeCommit$ = state(
 );
 
 const relatedCache$ = activeCommit$.pipeState(
+  filter((v) => v !== null),
   map((id) => ({
-    id,
+    id: id!,
     relatedLookup: {} as Record<string, boolean>,
   }))
 );

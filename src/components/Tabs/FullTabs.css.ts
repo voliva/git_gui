@@ -12,6 +12,10 @@ export const fullTab = style([
       "&.active": {
         backgroundColor: "#222244",
       },
+      "&.disabled": {
+        opacity: 0.6,
+        cursor: "default",
+      },
     },
   },
 ]);

@@ -11,23 +11,27 @@ import { WorkingDirectory } from "./WorkingDirectory";
 import { activeCommit$ } from "../RepoGrid/activeCommit";
 import { commitLookup$ } from "../repoState";
 
+// TODO select Details automatically when selecting an active commit (either by click or programatically (e.g. after commit))
 export const DetailPanel = () => {
   return (
     <FullTabs class={classes.detailPanelContainer}>
-      <FullTab header="Working Directory">
-        <WorkingDirectory />
-      </FullTab>
       <FullTab header="Details">
         <Details />
+      </FullTab>
+      <FullTab header="Working Directory">
+        <WorkingDirectory />
       </FullTab>
     </FullTabs>
   );
 };
 
 const commit$ = state(
-  combineLatest([activeCommit$, commitLookup$]).pipe(
-    filter(([id, commits]) => id in commits),
-    map(([id, commits]) => commits[id].commit),
+  combineLatest([
+    activeCommit$.pipe(filter((c) => c !== null)),
+    commitLookup$,
+  ]).pipe(
+    filter(([id, commits]) => id! in commits),
+    map(([id, commits]) => commits[id!].commit),
     distinctUntilChanged()
   )
 );

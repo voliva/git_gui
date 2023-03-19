@@ -6,7 +6,6 @@ use crate::timer::Timer;
 
 #[derive(Serialize)]
 pub enum GetRefsError {
-    NoHead,
     Read(String),
 }
 
@@ -106,14 +105,19 @@ pub fn get_refs(path: String) -> Result<Vec<Ref>, GetRefsError> {
     let mut timer = Timer::new();
     let repo = Repository::open(path)?;
 
-    let head = repo
-        .head()?
-        .resolve()?
-        .target()
-        .map(|oid| Ref::Head(oid.to_string()))
-        .ok_or(GetRefsError::NoHead)?;
+    // TODO get orphan branch
+    let head_option = repo
+        .head()
+        .and_then(|head| head.resolve())
+        .ok()
+        .and_then(|reference| reference.target())
+        .map(|oid| Ref::Head(oid.to_string()));
 
-    let mut list = vec![head];
+    let mut list = if let Some(head) = head_option {
+        vec![head]
+    } else {
+        vec![]
+    };
 
     let branches = repo
         .branches(None)?

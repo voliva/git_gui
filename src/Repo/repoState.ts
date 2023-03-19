@@ -111,7 +111,11 @@ export const isFetching$ = state(
 const shouldUpdateRepo$ = defer(() => repoEvents$).pipe(
   filter((v) =>
     v.paths.some(
-      (path) => path.includes(".git/refs") || path.endsWith(".git/HEAD")
+      (path) =>
+        path.includes(".git/refs") ||
+        path.endsWith(".git/HEAD") ||
+        path.includes(".git\\refs") ||
+        path.endsWith(".git\\HEAD")
     )
   ),
   connect((shared$) =>
@@ -227,7 +231,7 @@ type RustRef =
   | { type: RefType.Tag; payload: LocalRef };
 
 export interface Refs {
-  head: string;
+  head: string | null;
   activeBranch: LocalRef | null;
   local: Array<LocalRef>;
   remotes: Record<string, Array<RemoteRef>>;
@@ -237,11 +241,21 @@ export interface Refs {
 const getRefs$ = (path: string) => invoke<Array<RustRef>>("get_refs", { path });
 export const refs$ = repo_path$.pipeState(
   switchMap((path) =>
-    shouldUpdateRepo$.pipe(losslessExhaustMap(() => getRefs$(path!)))
+    shouldUpdateRepo$.pipe(
+      losslessExhaustMap(() =>
+        from(getRefs$(path!)).pipe(
+          catchError((err) => {
+            console.error(err);
+            console.error("Error happened on `refs$`");
+            return EMPTY;
+          })
+        )
+      )
+    )
   ),
   map((refs) => {
     const result: Refs = {
-      head: "",
+      head: null,
       activeBranch: null,
       local: [],
       remotes: {},
