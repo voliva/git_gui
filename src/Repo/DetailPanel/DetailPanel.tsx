@@ -11,14 +11,15 @@ import { WorkingDirectory } from "./WorkingDirectory";
 import { activeCommit$ } from "../RepoGrid/activeCommit";
 import { commitLookup$ } from "../repoState";
 
+// TODO select Details automatically when selecting an active commit (either by click or programatically (e.g. after commit))
 export const DetailPanel = () => {
   return (
     <FullTabs class={classes.detailPanelContainer}>
-      <FullTab header="Working Directory">
-        <WorkingDirectory />
-      </FullTab>
       <FullTab header="Details">
         <Details />
+      </FullTab>
+      <FullTab header="Working Directory">
+        <WorkingDirectory />
       </FullTab>
     </FullTabs>
   );
