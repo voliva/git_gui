@@ -30,19 +30,21 @@ export const refsLookup$ = refs$.pipeState(
       return (group.refs[type] = group.refs[type] ?? []);
     };
 
-    const headRef: LookedUpRef = {
+    const headRef = (id: string): LookedUpRef => ({
       type: RefType.Head,
-      ref: { id: refs.head, is_head: true, name: "HEAD" },
-    };
+      ref: { id, is_head: true, name: "HEAD" },
+    });
     if (refs.activeBranch) {
       const activeGroup = getRefGroup(
         refs.activeBranch.id,
         refs.activeBranch.name
       );
-      activeGroup.refs[RefType.Head] = [headRef];
-    } else {
+      if (refs.head) {
+        activeGroup.refs[RefType.Head] = [headRef(refs.head)];
+      }
+    } else if (refs.head) {
       const headGroup = getRefGroup(refs.head, "HEAD");
-      headGroup.refs[RefType.Head] = [headRef];
+      headGroup.refs[RefType.Head] = [headRef(refs.head)];
     }
 
     refs.local.forEach((localRef) => {

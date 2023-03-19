@@ -18,7 +18,7 @@ pub fn commit(path: String, message: String, amend: bool) -> Result<String, Comm
     let repo = Repository::open(path)?;
     let oid = repo.index()?.write_tree()?;
     let tree = repo.find_tree(oid)?;
-    let head_commit = repo.head()?.peel_to_commit().ok();
+    let head_commit = repo.head().and_then(|head| head.peel_to_commit()).ok();
     let signature = repo.signature()?;
 
     if amend {

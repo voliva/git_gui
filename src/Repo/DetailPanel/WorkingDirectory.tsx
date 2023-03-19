@@ -13,6 +13,7 @@ import {
   firstValueFrom,
   map,
   merge,
+  of,
   startWith,
   switchMap,
 } from "rxjs";
@@ -125,14 +126,18 @@ const StagingList = (props: {
 
 const headMessage$ = refs$.pipe(
   switchMap(({ head }) =>
-    commitLookup$.pipe(
-      map((lookup) => lookup[head]),
-      filter((v) => !!v),
-      map((positionedCommit) => positionedCommit.commit),
-      map((commit) =>
-        commit.body ? `${commit.summary}\n${commit.body}` : commit.summary ?? ""
-      )
-    )
+    head
+      ? commitLookup$.pipe(
+          map((lookup) => lookup[head]),
+          filter((v) => !!v),
+          map((positionedCommit) => positionedCommit.commit),
+          map((commit) =>
+            commit.body
+              ? `${commit.summary}\n${commit.body}`
+              : commit.summary ?? ""
+          )
+        )
+      : of("")
   )
 );
 
@@ -203,6 +208,7 @@ const CreateCommit = () => {
     if (r) {
       r.value = message;
       setCommitMessage(r.value);
+      setModified(false);
     }
   };
   const resetMessageToDefault = () => {
@@ -210,6 +216,7 @@ const CreateCommit = () => {
     if (r) {
       r.value = "";
       setCommitMessage(r.value);
+      setModified(false);
     }
   };
   const isNewCommitDisabled = () =>

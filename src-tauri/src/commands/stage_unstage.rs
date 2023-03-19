@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use super::serializer::delta::{Delta, FileChange};
-use git2::{Index, IndexAddOption, Repository};
+use git2::{ErrorCode, Index, IndexAddOption, Repository};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -16,9 +16,6 @@ impl From<git2::Error> for StageError {
         StageError::Read(value.message().to_owned())
     }
 }
-
-// TODO check for repos without index (just after initializing)
-// TODO check for repos without commit (just after initializing)
 
 #[tauri::command(async)]
 pub fn stage(path: String, delta: Option<Delta>) -> Result<(), StageError> {
@@ -77,8 +74,19 @@ pub fn unstage(path: String, delta: Option<Delta>) -> Result<(), StageError> {
 }
 
 fn reset_index_to_head(repo: &Repository, path: Option<&str>) -> Result<(), StageError> {
+    println!("reset_index_to_head");
     let mut index = repo.index()?;
-    let head = repo.head()?.peel_to_tree()?;
+    let head_result = repo.head().and_then(|head| head.peel_to_tree());
+
+    if let Err(err) = &head_result {
+        // Case repo without head (just initialised)
+        if err.code() == ErrorCode::UnbornBranch {
+            index.remove_all(["*"], None)?;
+            index.write()?;
+            return Ok(());
+        }
+    }
+    let head = head_result?;
 
     if let Some(path) = path {
         // Reference https://stackoverflow.com/a/35093146/1026619

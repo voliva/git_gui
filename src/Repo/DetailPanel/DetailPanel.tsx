@@ -25,9 +25,12 @@ export const DetailPanel = () => {
 };
 
 const commit$ = state(
-  combineLatest([activeCommit$, commitLookup$]).pipe(
-    filter(([id, commits]) => id in commits),
-    map(([id, commits]) => commits[id].commit),
+  combineLatest([
+    activeCommit$.pipe(filter((c) => c !== null)),
+    commitLookup$,
+  ]).pipe(
+    filter(([id, commits]) => id! in commits),
+    map(([id, commits]) => commits[id!].commit),
     distinctUntilChanged()
   )
 );
