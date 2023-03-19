@@ -1,7 +1,7 @@
-use std::{path::PathBuf, str::FromStr};
+use std::path::PathBuf;
 
 use super::serializer::delta::{Delta, FileChange};
-use git2::{Index, IndexAddOption, IndexEntry, Repository};
+use git2::{Index, IndexAddOption, Repository};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -30,7 +30,6 @@ pub fn stage(path: String, delta: Option<Delta>) -> Result<(), StageError> {
             FileChange::Copied(_, f) => add_from_working_dir(&repo, Some(&f.path)), // TODO check
             FileChange::Deleted(f) => remove_from_index(&repo, &f.path),
             FileChange::Renamed(old, new) => {
-                // TODO check
                 remove_from_index(&repo, &old.path)?;
                 add_from_working_dir(&repo, Some(&new.path))
             }
@@ -66,7 +65,6 @@ pub fn unstage(path: String, delta: Option<Delta>) -> Result<(), StageError> {
             FileChange::Copied(_, f) => remove_from_index(&repo, &f.path), // TODO check
             FileChange::Deleted(f) => recover_index_from_head(&repo, &f.path),
             FileChange::Renamed(old, new) => {
-                // TODO check
                 recover_index_from_head(&repo, &old.path)?;
                 remove_from_index(&repo, &new.path)
             }

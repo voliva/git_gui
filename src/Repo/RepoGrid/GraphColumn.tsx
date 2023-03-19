@@ -125,7 +125,6 @@ async function drawCommit(
   positionedCommitGetter: () => PositionedCommit
 ) {
   const positionedCommit = positionedCommitGetter();
-  ctx.beginPath();
   const centerX = Math.min(
     getPositionX(positionedCommit.position),
     width - COMMIT_RADIUS - GRAPH_MARGIN
@@ -134,6 +133,7 @@ async function drawCommit(
   const hash = positionedCommit.commit.author.hash ?? NO_ONE;
   const color = getAuthorColor(hash);
   const drawBackground = (radius: number) => {
+    ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
     ctx.fillStyle = `hsl(${color}, 100%, 60%)`;
     ctx.fill();

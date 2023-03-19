@@ -1,4 +1,5 @@
 import { qs } from "@/quickStyles";
+import { AiOutlineQuestionCircle } from "solid-icons/ai";
 import {
   OcFileadded2,
   OcFilediff2,
@@ -34,7 +35,7 @@ export const DeltaSummary = (props: {
   const getIcon = () =>
     switchChangeType(props.delta.change, {
       Added: () => OcFileadded2,
-      Untracked: () => OcFileadded2, // TODO
+      Untracked: () => AiOutlineQuestionCircle,
       Copied: () => OcFilesymlinkfile2,
       Deleted: () => OcFileremoved2,
       Renamed: () => OcFilemoved2,

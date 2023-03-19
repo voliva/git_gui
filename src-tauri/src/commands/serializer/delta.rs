@@ -47,6 +47,7 @@ impl<'a> TryFrom<git2::DiffDelta<'a>> for Delta {
         let change = match value.status() {
             git2::Delta::Added => FileChange::Added(value.new_file().into()),
             git2::Delta::Copied => {
+                println!("Copied!!!"); // I couldn't see any instance of this happening?
                 FileChange::Copied(value.old_file().into(), value.new_file().into())
             }
             git2::Delta::Deleted => FileChange::Deleted(value.old_file().into()),
