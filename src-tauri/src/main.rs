@@ -9,8 +9,8 @@ mod settings;
 mod timer;
 
 use crate::commands::{
-    fetch, get_commit, get_commits, get_last_repo, get_refs, get_working_dir, open_repo, stage,
-    stop_watch_repo, unstage, watch_repo,
+    commit, fetch, get_commit, get_commits, get_last_repo, get_refs, get_working_dir, open_repo,
+    stage, stop_watch_repo, unstage, watch_repo,
 };
 use notify::RecommendedWatcher;
 use std::{sync::Mutex, thread};
@@ -24,6 +24,7 @@ pub struct AppState {
 fn main() {
     let app = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            commit,
             fetch,
             get_commit,
             get_commits,

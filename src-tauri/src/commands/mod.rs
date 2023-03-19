@@ -1,3 +1,4 @@
+mod commit;
 mod fetch;
 mod get_commit;
 mod get_commits;
@@ -9,6 +10,7 @@ pub mod serializer;
 mod stage_unstage;
 mod watch_repo;
 
+pub use commit::*;
 pub use fetch::*;
 pub use get_commit::*;
 pub use get_commits::*;

@@ -111,7 +111,11 @@ export const isFetching$ = state(
 const shouldUpdateRepo$ = defer(() => repoEvents$).pipe(
   filter((v) =>
     v.paths.some(
-      (path) => path.includes(".git/refs") || path.endsWith(".git/HEAD")
+      (path) =>
+        path.includes(".git/refs") ||
+        path.endsWith(".git/HEAD") ||
+        path.includes(".git\\refs") ||
+        path.endsWith(".git\\HEAD")
     )
   ),
   connect((shared$) =>

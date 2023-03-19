@@ -17,6 +17,7 @@ import {
   switchMap,
 } from "rxjs";
 import { For, createSignal as solidCreateSignal, createEffect } from "solid-js";
+import { setActiveCommit } from "../RepoGrid/activeCommit";
 import { commitLookup$, refs$, repo_path$ } from "../repoState";
 import { Delta } from "./ActiveCommitChanges";
 import { DeltaSummary } from "./DeltaSummaryLine";
@@ -250,7 +251,25 @@ const CreateCommit = () => {
         }}
       ></textarea>
       <div class={classes.messageLength}>{getMessageLength()}</div>
-      <button class={classes.commitBtn} disabled={commitBtnDisabled()}>
+      <button
+        class={classes.commitBtn}
+        disabled={commitBtnDisabled()}
+        onClick={async () => {
+          const path = await firstValueFrom(repo_path$);
+          const message = await firstValueFrom(commitMessage$);
+          const id = await invoke<string>("commit", {
+            path,
+            message,
+            amend: activeTab() === CommitTab.Amend,
+          });
+          resetMessageToDefault();
+          // TODO reset active tab to new commit
+          await firstValueFrom(
+            commitLookup$.pipe(filter((lookup) => Boolean(lookup[id])))
+          );
+          setActiveCommit(id);
+        }}
+      >
         Commit
       </button>
     </div>

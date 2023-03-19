@@ -33,6 +33,7 @@ export const stagingList = style({
 
 export const commitMessageArea = style({
   backgroundColor: deepBgColor,
+  lineHeight: 1.5,
   color: "white",
   padding: "0.5rem",
   boxSizing: "border-box",
