@@ -21,6 +21,10 @@
         "all": false,
         "readText": false,
         "writeText": true
+      },
+      "dialog": {
+        "all": false,
+        "message": true
       }
     },
     "bundle": {

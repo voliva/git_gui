@@ -4,16 +4,7 @@ use serde::Serialize;
 
 use crate::timer::Timer;
 
-#[derive(Serialize)]
-pub enum GetRefsError {
-    Read(String),
-}
-
-impl From<git2::Error> for GetRefsError {
-    fn from(value: git2::Error) -> Self {
-        GetRefsError::Read(value.message().to_owned())
-    }
-}
+use super::serializer::git_error::GitError;
 
 #[derive(Debug, Serialize)]
 pub struct LocalRef {
@@ -101,7 +92,7 @@ impl TryFrom<(Branch<'_>, BranchType)> for Ref {
 }
 
 #[tauri::command(async)]
-pub fn get_refs(path: String) -> Result<Vec<Ref>, GetRefsError> {
+pub fn get_refs(path: String) -> Result<Vec<Ref>, GitError> {
     let mut timer = Timer::new();
     let repo = Repository::open(path)?;
 

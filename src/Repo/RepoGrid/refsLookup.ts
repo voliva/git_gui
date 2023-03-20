@@ -9,6 +9,7 @@ export type RefGroups = Record<string, RefGroup>;
 
 export interface RefGroup {
   name: string;
+  // It's a Record<_, Array<_>> because a group+reftype can have multiple refs: on the case of many origins
   refs: Partial<Record<RefType, Array<LookedUpRef>>>;
 }
 

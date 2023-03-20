@@ -3,16 +3,18 @@ import { qs } from "@/quickStyles";
 import { readParametricState } from "@/rxState";
 import { state } from "@react-rxjs/core";
 import classNames from "classnames";
-import { map } from "rxjs";
+import { firstValueFrom, map } from "rxjs";
 import { AiOutlineCloud, AiOutlineTag } from "solid-icons/ai";
 import { FaRegularHardDrive, FaSolidHorseHead } from "solid-icons/fa";
 import { createSignal, For, ValidComponent } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useTippy } from "solid-tippy";
+import { workingDirectory$ } from "../DetailPanel/workingDirectoryState";
 import { PositionedCommit, RefType, RemoteRef } from "../repoState";
 import { isRelatedToActive$ } from "./activeCommit";
 import { LookedUpRef, RefGroup, refsLookup$ } from "./refsLookup";
 import * as gridClasses from "./RepoGrid.css";
+import { message } from "@tauri-apps/api/dialog";
 import * as classes from "./SummaryColumn.css";
 
 export const SummaryColumn = () => (
@@ -88,8 +90,36 @@ const TagIcon = (props: { type: RefType; refs: LookedUpRef[] }) => {
 };
 
 const TagGroup = (props: { group: RefGroup }) => {
+  const onDoubleClick = async () => {
+    const isHead = Boolean(props.group.refs[RefType.Head]);
+    if (isHead) return;
+
+    const workingDir = await firstValueFrom(workingDirectory$);
+    if (workingDir.staged_deltas.length || workingDir.unstaged_deltas.length) {
+      await message(
+        "You have uncommited changes. Commit, stash or discard them."
+      );
+      return;
+    }
+
+    const localBranch = props.group.refs[RefType.LocalBranch]?.[0];
+    if (localBranch) {
+      console.log("checkout local branch", localBranch);
+      return;
+    }
+
+    const remoteBranches = props.group.refs[RefType.RemoteBranch] ?? [];
+    if (remoteBranches) {
+      console.log("checkout remote branch", remoteBranches);
+      return;
+    }
+
+    // It has to be a tag. Checkout commit.
+    console.log("checkout commit");
+  };
+
   return (
-    <div class={classes.refTag}>
+    <div class={classes.refTag} onDblClick={onDoubleClick}>
       <For each={Object.entries(props.group.refs)}>
         {([type, refs]) => <TagIcon type={type as RefType} refs={refs} />}
       </For>

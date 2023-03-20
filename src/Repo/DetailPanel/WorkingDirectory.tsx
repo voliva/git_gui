@@ -1,63 +1,24 @@
-import { FullTabs, FullTab, FullTabProps } from "@/components/Tabs/FullTabs";
+import { FullTab, FullTabs } from "@/components/Tabs/FullTabs";
 import { qs } from "@/quickStyles";
 import { readState } from "@/rxState";
-import { listen$ } from "@/tauriRx";
 import { state, withDefault } from "@react-rxjs/core";
 import { createSignal } from "@react-rxjs/utils";
 import { invoke } from "@tauri-apps/api";
 import {
   combineLatest,
-  distinctUntilChanged,
-  exhaustMap,
   filter,
   firstValueFrom,
   map,
-  merge,
   of,
-  startWith,
   switchMap,
 } from "rxjs";
-import { For, createSignal as solidCreateSignal, createEffect } from "solid-js";
+import { createSignal as solidCreateSignal, For } from "solid-js";
 import { setActiveCommit } from "../RepoGrid/activeCommit";
 import { commitLookup$, refs$, repo_path$ } from "../repoState";
-import { Delta } from "./ActiveCommitChanges";
+import { Delta } from "./activeCommitChangesState";
 import { DeltaSummary } from "./DeltaSummaryLine";
 import * as classes from "./WorkingDirectory.css";
-
-interface WorkingDirStatus {
-  unstaged_deltas: Delta[];
-  staged_deltas: Delta[];
-}
-
-const [refresh$, refresh] = createSignal<void>();
-const workingDirectory$ = state(
-  merge(
-    listen$<WorkingDirStatus>("working-directory").pipe(
-      map((evt) => evt.payload)
-    ),
-    repo_path$.pipe(
-      switchMap((path) =>
-        refresh$.pipe(
-          startWith(null),
-          exhaustMap(() =>
-            invoke<WorkingDirStatus>("get_working_dir", { path })
-          )
-        )
-      )
-    )
-  )
-);
-
-async function stage(delta?: Delta) {
-  const path = await firstValueFrom(repo_path$);
-  await invoke("stage", { delta, path });
-  refresh();
-}
-async function unstage(delta?: Delta) {
-  const path = await firstValueFrom(repo_path$);
-  await invoke("unstage", { delta, path });
-  refresh();
-}
+import { stage, unstage, workingDirectory$ } from "./workingDirectoryState";
 
 export const WorkingDirectory = () => {
   const result = readState(workingDirectory$);

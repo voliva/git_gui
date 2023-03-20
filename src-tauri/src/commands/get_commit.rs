@@ -2,16 +2,7 @@ use crate::commands::serializer::delta::Delta;
 use git2::{Oid, Repository};
 use serde::Serialize;
 
-#[derive(Serialize, Debug)]
-pub enum GetCommitError {
-    Read(String),
-}
-
-impl From<git2::Error> for GetCommitError {
-    fn from(value: git2::Error) -> Self {
-        GetCommitError::Read(value.message().to_owned())
-    }
-}
+use super::serializer::git_error::GitError;
 
 #[derive(Serialize)]
 pub struct CommitContents {
@@ -21,7 +12,7 @@ pub struct CommitContents {
 }
 
 #[tauri::command(async)]
-pub fn get_commit(path: String, id: String) -> Result<CommitContents, GetCommitError> {
+pub fn get_commit(path: String, id: String) -> Result<CommitContents, GitError> {
     let repo = Repository::open(path)?;
 
     let commit = repo.find_commit(Oid::from_str(&id)?)?;
