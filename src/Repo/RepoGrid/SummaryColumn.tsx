@@ -10,12 +10,19 @@ import { createSignal, For, ValidComponent } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useTippy } from "solid-tippy";
 import { workingDirectory$ } from "../DetailPanel/workingDirectoryState";
-import { PositionedCommit, RefType, RemoteRef } from "../repoState";
+import {
+  LocalRef,
+  PositionedCommit,
+  RefType,
+  RemoteRef,
+  repo_path$,
+} from "../repoState";
 import { isRelatedToActive$ } from "./activeCommit";
 import { LookedUpRef, RefGroup, refsLookup$ } from "./refsLookup";
 import * as gridClasses from "./RepoGrid.css";
-import { message } from "@tauri-apps/api/dialog";
+import { confirm, message } from "@tauri-apps/api/dialog";
 import * as classes from "./SummaryColumn.css";
+import { invoke } from "@tauri-apps/api";
 
 export const SummaryColumn = () => (
   <Column
@@ -34,6 +41,20 @@ const SummaryCell = (props: CellRendererProps<PositionedCommit>) => {
     false
   );
 
+  const onDoubleClick = async (evt: MouseEvent) => {
+    evt.stopPropagation();
+
+    const workingDir = await firstValueFrom(workingDirectory$);
+    if (workingDir.staged_deltas.length || workingDir.unstaged_deltas.length) {
+      await message(
+        "You have uncommited changes. Commit, stash or discard them."
+      );
+      return;
+    }
+
+    await checkoutCommit(props.item.commit.id);
+  };
+
   return (
     <div
       class={classNames(classes.summaryCell, {
@@ -41,7 +62,7 @@ const SummaryCell = (props: CellRendererProps<PositionedCommit>) => {
       })}
     >
       <CommitRefs id={props.item.commit.id} />
-      <div class={qs("boxFill", "textEllipsis")}>
+      <div class={qs("boxFill", "textEllipsis")} onDblClick={onDoubleClick}>
         {props.item.commit.summary}
       </div>
     </div>
@@ -90,10 +111,13 @@ const TagIcon = (props: { type: RefType; refs: LookedUpRef[] }) => {
 };
 
 const TagGroup = (props: { group: RefGroup }) => {
-  const onDoubleClick = async () => {
+  const onDoubleClick = async (evt: MouseEvent) => {
+    evt.stopPropagation();
+
     const isHead = Boolean(props.group.refs[RefType.Head]);
     if (isHead) return;
 
+    console.log("get working dir");
     const workingDir = await firstValueFrom(workingDirectory$);
     if (workingDir.staged_deltas.length || workingDir.unstaged_deltas.length) {
       await message(
@@ -102,20 +126,33 @@ const TagGroup = (props: { group: RefGroup }) => {
       return;
     }
 
+    console.log("get path");
+    const path = await firstValueFrom(repo_path$);
+
     const localBranch = props.group.refs[RefType.LocalBranch]?.[0];
     if (localBranch) {
-      console.log("checkout local branch", localBranch);
+      const ref = localBranch.ref as LocalRef;
+      await invoke("checkout_local", {
+        path,
+        branchName: ref.name,
+      });
       return;
     }
 
     const remoteBranches = props.group.refs[RefType.RemoteBranch] ?? [];
-    if (remoteBranches) {
-      console.log("checkout remote branch", remoteBranches);
+    if (remoteBranches.length) {
+      const ref = remoteBranches[0].ref as RemoteRef;
+      console.log("checkout remote branch", ref);
+      await invoke("checkout_remote", {
+        path,
+        origin: ref.remote,
+        branchName: ref.name,
+      });
       return;
     }
 
     // It has to be a tag. Checkout commit.
-    console.log("checkout commit");
+    await checkoutCommit(props.group.refs[RefType.Tag]![0].ref.id);
   };
 
   return (
@@ -139,3 +176,20 @@ const CommitRefs = (props: { id: string }) => {
     </div>
   );
 };
+
+async function checkoutCommit(id: string) {
+  if (
+    !(await confirm(
+      "You are about to checkout the commit in detached mode. Make sure to create a branch or your changes could be lost"
+    ))
+  ) {
+    return;
+  }
+
+  const path = await firstValueFrom(repo_path$);
+
+  await invoke("checkout_commit", {
+    path,
+    id,
+  });
+}
