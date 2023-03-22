@@ -1,8 +1,7 @@
 use git2::{Branch, BranchType, Repository};
 use itertools::Itertools;
+use logging_timer::time;
 use serde::Serialize;
-
-use crate::timer::Timer;
 
 use super::serializer::git_error::GitError;
 
@@ -91,9 +90,9 @@ impl TryFrom<(Branch<'_>, BranchType)> for Ref {
     }
 }
 
+#[time]
 #[tauri::command(async)]
 pub fn get_refs(path: String) -> Result<Vec<Ref>, GitError> {
-    let mut timer = Timer::new();
     let repo = Repository::open(path)?;
 
     // TODO get orphan branch
@@ -126,8 +125,6 @@ pub fn get_refs(path: String) -> Result<Vec<Ref>, GitError> {
     });
 
     list.extend(tags);
-
-    println!("get_refs: {}", timer.lap());
 
     Ok(list)
 }

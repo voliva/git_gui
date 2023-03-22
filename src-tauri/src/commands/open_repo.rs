@@ -1,5 +1,6 @@
 use crate::settings::set_settings_opened_repo;
 use git2::Repository;
+use logging_timer::time;
 use serde::Serialize;
 use std::sync::mpsc;
 use tauri::api::dialog::FileDialogBuilder;
@@ -16,6 +17,7 @@ impl From<git2::Error> for OpenRepoError {
     }
 }
 
+#[time]
 #[tauri::command(async)]
 pub fn open_repo(app: tauri::AppHandle) -> Result<String, OpenRepoError> {
     let (sx, rx) = mpsc::channel();

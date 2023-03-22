@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use super::serializer::delta::{Delta, FileChange};
 use git2::{ErrorCode, Index, IndexAddOption, Repository};
+use logging_timer::time;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -17,6 +18,7 @@ impl From<git2::Error> for StageError {
     }
 }
 
+#[time]
 #[tauri::command(async)]
 pub fn stage(path: String, delta: Option<Delta>) -> Result<(), StageError> {
     let repo = Repository::open(path)?;
@@ -52,6 +54,7 @@ fn add_from_working_dir(repo: &Repository, path: Option<&str>) -> Result<(), Sta
     Ok(())
 }
 
+#[time]
 #[tauri::command(async)]
 pub fn unstage(path: String, delta: Option<Delta>) -> Result<(), StageError> {
     let repo = Repository::open(path)?;

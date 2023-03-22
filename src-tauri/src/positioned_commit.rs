@@ -176,23 +176,22 @@ where
             .collect_vec();
 
         // Step 4. Add this commit's legacy
-        let parents = commit.parent_ids().collect_vec();
-        if parents.len() > 0 {
-            if position == self.branches.len() {
-                self.branches.push(Some(parents[0]))
+        commit.parent_ids().enumerate().for_each(|(i, parent_id)| {
+            if i == 0 {
+                if position == self.branches.len() {
+                    self.branches.push(Some(parent_id))
+                } else {
+                    self.branches[position] = Some(parent_id);
+                }
+                paths.push(BranchPath::Parent(position));
             } else {
-                self.branches[position] = Some(parents[0]);
-            }
-            paths.push(BranchPath::Parent(position));
-
-            if parents.len() > 1 {
                 // We can try and split it from an existing path if it's already there
                 let existing = self
                     .branches
                     .iter()
                     .find_position(|content| {
                         content
-                            .and_then(|id| Some(parents[1].eq(&id)))
+                            .and_then(|id| Some(parent_id.eq(&id)))
                             .unwrap_or(false)
                     })
                     .map(|(position, _)| position);
@@ -209,13 +208,13 @@ where
                     .unwrap();
 
                 if position == self.branches.len() {
-                    self.branches.push(Some(parents[1]))
+                    self.branches.push(Some(parent_id))
                 } else {
-                    self.branches[position] = Some(parents[1]);
+                    self.branches[position] = Some(parent_id);
                 }
                 paths.push(BranchPath::Parent(position));
             }
-        }
+        });
 
         commit.parent_ids().for_each(|parent| {
             self.descendants
@@ -262,9 +261,14 @@ fn get_revwalk(repo: &Repository) -> Result<Revwalk, Error> {
 
     let mut walker = repo.revwalk()?;
     walker.set_sorting(Sort::TOPOLOGICAL.union(Sort::TIME))?;
-    // Use "refs/heads" if you only want to get commits held by branches
-    walker.push_glob("refs/heads")?;
-    walker.push_glob("refs/remotes")?;
+
+    // walker.push_glob("*")?; // All (also stashes)
+    walker.push_glob("refs/heads")?; // Local branches
+    walker.push_glob("refs/remotes")?; // Remote branches
+    walker.push_glob("refs/tags")?; // Tags
+
+    // Add the head in case it's detached
+    walker.push_head()?;
 
     Ok(walker)
 }

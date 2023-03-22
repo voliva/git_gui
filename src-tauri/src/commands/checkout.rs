@@ -1,6 +1,8 @@
 use super::serializer::git_error::GitError;
 use git2::{build::CheckoutBuilder, Oid, Repository};
+use logging_timer::time;
 
+#[time]
 #[tauri::command(async)]
 pub fn checkout_commit(path: String, id: String) -> Result<(), GitError> {
     let repo = Repository::open(path)?;
@@ -18,6 +20,7 @@ pub fn checkout_commit(path: String, id: String) -> Result<(), GitError> {
     Ok(())
 }
 
+#[time]
 #[tauri::command(async)]
 pub fn checkout_local(path: String, branch_name: String) -> Result<(), GitError> {
     let repo = Repository::open(path)?;
@@ -49,6 +52,7 @@ pub fn checkout_local(path: String, branch_name: String) -> Result<(), GitError>
     Ok(())
 }
 
+#[time]
 #[tauri::command(async)]
 pub fn checkout_remote(path: String, origin: String, branch_name: String) -> Result<(), GitError> {
     let repo = Repository::open(path.clone())?;

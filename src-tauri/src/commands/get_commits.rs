@@ -1,12 +1,13 @@
 use std::time::Duration;
 
 use crate::positioned_commit::get_positioned_commits;
-use crate::timer::Timer;
 use git2::Repository;
+use logging_timer::time;
 use tauri::Window;
 
 use super::serializer::git_error::GitError;
 
+#[time]
 #[tauri::command(async)]
 pub fn get_commits(
     path: String,
@@ -16,7 +17,6 @@ pub fn get_commits(
     let repo = Repository::open(path)?;
 
     let response_channel = format!("get_commits-stream-{correlation_id}");
-    let mut timer = Timer::new();
     let result = get_positioned_commits(&repo)
         .enumerate()
         .map(|(i, x)| {
@@ -27,8 +27,6 @@ pub fn get_commits(
             x
         })
         .count();
-
-    println!("get_commits({}) {}", result, timer.lap());
 
     Ok(result)
 }

@@ -2,16 +2,15 @@ use std::{env, thread};
 
 use git2::{AutotagOption, Cred, CredentialType, FetchOptions, RemoteCallbacks, Repository};
 use itertools::Itertools;
-
-use crate::timer::Timer;
+use logging_timer::{executing, timer};
 
 #[tauri::command(async)]
 pub fn fetch(path: String) {
-    let mut timer = Timer::new();
+    let tmr = timer!("fetch()");
     let repo = Repository::open(path.clone()).unwrap();
     let remotes = get_remotes(&repo);
 
-    println!("fetch - get remotes {}", timer.lap());
+    executing!(tmr, "get remotes");
 
     remotes
         .into_iter()
@@ -102,8 +101,6 @@ pub fn fetch(path: String) {
         .for_each(|handle| {
             handle.join().ok();
         });
-
-    println!("fetch - download {}", timer.lap());
 }
 
 fn get_remotes(repo: &Repository) -> Vec<String> {

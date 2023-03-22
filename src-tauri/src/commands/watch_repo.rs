@@ -1,5 +1,6 @@
 use super::read_working_dir;
 use crate::AppState;
+use logging_timer::time;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{
     path::Path,
@@ -9,6 +10,7 @@ use std::{
 };
 use tauri::{State, Window};
 
+#[time]
 #[tauri::command(async)]
 pub fn watch_repo(path: String, state: State<AppState>, window: Window) {
     let (tx, rx) = channel();
@@ -71,6 +73,7 @@ pub fn watch_repo(path: String, state: State<AppState>, window: Window) {
         .ok();
 }
 
+#[time]
 #[tauri::command(async)]
 pub fn stop_watch_repo(state: State<AppState>) {
     state

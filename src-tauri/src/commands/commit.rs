@@ -1,4 +1,5 @@
 use git2::Repository;
+use logging_timer::time;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -13,6 +14,7 @@ impl From<git2::Error> for CommitError {
     }
 }
 
+#[time]
 #[tauri::command(async)]
 pub fn commit(path: String, message: String, amend: bool) -> Result<String, CommitError> {
     let repo = Repository::open(path)?;

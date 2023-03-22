@@ -1,5 +1,6 @@
 use crate::commands::serializer::delta::Delta;
 use git2::{Oid, Repository};
+use logging_timer::time;
 use serde::Serialize;
 
 use super::serializer::git_error::GitError;
@@ -11,6 +12,7 @@ pub struct CommitContents {
     deltas: Vec<Delta>,
 }
 
+#[time]
 #[tauri::command(async)]
 pub fn get_commit(path: String, id: String) -> Result<CommitContents, GitError> {
     let repo = Repository::open(path)?;
