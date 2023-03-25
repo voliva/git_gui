@@ -16,7 +16,7 @@ export const Grid = <T,>(props: {
   children: JSX.Element;
   itemClass?: (item: T) => string | null | undefined;
   onRowClick?: (item: T) => void;
-  onKeyDown?: JSX.EventHandlerUnion<HTMLDivElement, KeyboardEvent>;
+  onKeyDown?: JSX.EventHandler<HTMLDivElement, KeyboardEvent>;
 }) => {
   const resolved = children(() => props.children);
   /**
@@ -103,7 +103,7 @@ export const Grid = <T,>(props: {
           <Cell width={getColumnWidth(props)} class={props.headerClass}>
             <span>{props.header}</span>
             <Show when={props.minWidth !== undefined}>
-              <div class={classes.resizer} onMouseDown={onMouseDown}></div>
+              <div class={classes.resizer} onMouseDown={onMouseDown} />
             </Show>
           </Cell>
         );
@@ -119,10 +119,11 @@ export const Grid = <T,>(props: {
         [props.class || ""]: Boolean(props.class),
       }}
       ref={scrollTargetElement}
-      onKeyDown={props.onKeyDown}
+      onKeyDown={(evt) => props.onKeyDown?.(evt)}
     >
       <div class={classes.headerContainer}>{getHeaders()}</div>
       <VirtualContainer
+        // eslint-disable-next-line solid/no-react-specific-props
         className={classes.virtualContainer}
         items={props.items}
         scrollTarget={scrollTargetElement}

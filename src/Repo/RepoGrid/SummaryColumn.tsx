@@ -6,7 +6,7 @@ import classNames from "classnames";
 import { firstValueFrom, map } from "rxjs";
 import { AiOutlineCloud, AiOutlineTag } from "solid-icons/ai";
 import { FaRegularHardDrive, FaSolidHorseHead } from "solid-icons/fa";
-import { createSignal, For, ValidComponent } from "solid-js";
+import { createSignal, For, Show, ValidComponent } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useTippy } from "solid-tippy";
 import { workingDirectory$ } from "../DetailPanel/workingDirectoryState";
@@ -37,6 +37,8 @@ export const SummaryColumn = () => (
 const SummaryCell = (props: CellRendererProps<PositionedCommit>) => {
   const isRelated = readParametricState(
     isRelatedToActive$,
+    // https://github.com/solidjs-community/eslint-plugin-solid/pull/87
+    // eslint-disable-next-line solid/reactivity
     () => props.item.commit.id,
     false
   );
@@ -100,15 +102,16 @@ const RemoteTagIcon = (props: { refs: RemoteRef[] }) => {
   );
 };
 
-const TagIcon = (props: { type: RefType; refs: LookedUpRef[] }) => {
-  if (props.type === RefType.RemoteBranch) {
-    return (
+const TagIcon = (props: { type: RefType; refs: LookedUpRef[] }) => (
+  <Show
+    when={props.type !== RefType.RemoteBranch}
+    fallback={
       <RemoteTagIcon refs={props.refs.map((ref) => ref.ref as RemoteRef)} />
-    );
-  }
-
-  return <Dynamic class={qs("boxAuto")} component={icons[props.type]} />;
-};
+    }
+  >
+    <Dynamic class={qs("boxAuto")} component={icons[props.type]} />;
+  </Show>
+);
 
 const TagGroup = (props: { group: RefGroup }) => {
   const onDoubleClick = async (evt: MouseEvent) => {
@@ -167,6 +170,8 @@ const TagGroup = (props: { group: RefGroup }) => {
 };
 
 const CommitRefs = (props: { id: string }) => {
+  // https://github.com/solidjs-community/eslint-plugin-solid/pull/87
+  // eslint-disable-next-line solid/reactivity
   const refGroups = readParametricState(commitRefGroups$, () => props.id);
 
   return (

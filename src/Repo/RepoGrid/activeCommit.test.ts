@@ -228,7 +228,7 @@ function createLookup(
           time: c.time,
           parents: parents(c.parent),
         },
-      } as any as PositionedCommit)
+      } as unknown as PositionedCommit)
   );
 
   Object.entries(commits).forEach(([id, c]) =>

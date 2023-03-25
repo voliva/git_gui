@@ -217,7 +217,7 @@ const CreateCommit = () => {
           setCommitMessage(evt.currentTarget.value);
           setModified(evt.currentTarget.value !== "");
         }}
-      ></textarea>
+      />
       <div class={classes.messageLength}>{getMessageLength()}</div>
       <button
         class={classes.commitBtn}

@@ -7,7 +7,7 @@ import {
   OcFileremoved2,
   OcFilesymlinkfile2,
 } from "solid-icons/oc";
-import { createSignal, JSX } from "solid-js";
+import { createMemo, createSignal, JSX } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useTippy } from "solid-tippy";
 import {
@@ -51,13 +51,13 @@ export const DeltaSummary = (props: {
       Modified: () => changeColor,
     });
 
-  const splitFile = () => {
+  const splitFile = createMemo(() => {
     const path = getFile().path;
     const lastSlash = path.lastIndexOf("/");
     return lastSlash >= 0
-      ? [path.slice(0, lastSlash), path.slice(lastSlash)]
-      : ["", path];
-  };
+      ? { path: path.slice(0, lastSlash), name: path.slice(lastSlash) }
+      : { path: "", name: path };
+  });
 
   const [anchor, setAnchor] = createSignal<HTMLDivElement>();
 
@@ -72,29 +72,25 @@ export const DeltaSummary = (props: {
     },
   });
 
-  return () => {
-    const [path, name] = splitFile();
-
-    return (
-      <li class={classes.changeLine} ref={setAnchor}>
-        <div class={qs("horizontalFlex", "noOverflow", "centeredFlex")}>
-          <span class={classes.changeIcon} style={{ color: getStyle() }}>
-            <Dynamic component={getIcon()} />
-          </span>
-          <span
-            class={classes.filePathDirectory}
-            style={{
-              "min-width": Math.min(3, path.length * 0.6) + "rem",
-            }}
-          >
-            {path}
-          </span>
-          <span class={classes.filePathName}>{name}</span>
-        </div>
-        {props.children}
-      </li>
-    );
-  };
+  return (
+    <li class={classes.changeLine} ref={setAnchor}>
+      <div class={qs("horizontalFlex", "noOverflow", "centeredFlex")}>
+        <span class={classes.changeIcon} style={{ color: getStyle() }}>
+          <Dynamic component={getIcon()} />
+        </span>
+        <span
+          class={classes.filePathDirectory}
+          style={{
+            "min-width": Math.min(3, splitFile().path.length * 0.6) + "rem",
+          }}
+        >
+          {splitFile().path}
+        </span>
+        <span class={classes.filePathName}>{splitFile().name}</span>
+      </div>
+      {props.children}
+    </li>
+  );
 };
 
 function switchChangeType<T>(

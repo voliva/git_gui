@@ -4,9 +4,17 @@ import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import path from "path";
 import { defineConfig } from "vite";
 import solidPlugin from "vite-plugin-solid";
+import eslint from "vite-plugin-eslint";
 
 export default defineConfig({
-  plugins: [solidPlugin(), vanillaExtractPlugin()],
+  plugins: [
+    solidPlugin(),
+    vanillaExtractPlugin(),
+    eslint({
+      failOnWarning: !process.env.TAURI_DEBUG,
+      failOnError: !process.env.TAURI_DEBUG,
+    }),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),

@@ -68,6 +68,9 @@ const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
       activeId() === props.item.commit.id,
       props.isHovering
     );
+
+    // CASE I think it's safe to ignore? I would be passing props.item, but I have to know if it changes after a promise resolves.
+    // eslint-disable-next-line solid/reactivity
     drawCommit(ctx, width, () => props.item);
   });
 
