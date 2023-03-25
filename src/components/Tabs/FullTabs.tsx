@@ -23,7 +23,7 @@ export const FullTabs = (props: {
             if (!tabProps) return null;
 
             return (
-              <div
+              <button
                 class={classNames(classes.fullTab, {
                   active: tabProps === activeView(),
                   disabled: tabProps.disabled,
@@ -40,7 +40,7 @@ export const FullTabs = (props: {
                 }}
               >
                 {tabProps.header}
-              </div>
+              </button>
             );
           }}
         </For>

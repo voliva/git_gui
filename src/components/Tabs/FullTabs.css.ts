@@ -5,9 +5,14 @@ export const fullTab = style([
   textEllipsis,
   boxSplit,
   {
-    padding: "0.2rem 0.4rem",
+    padding: "0.4rem",
     cursor: "pointer",
     userSelect: "none",
+    background: "transparent",
+    color: "white",
+    border: "none",
+    textAlign: "left",
+    backgroundColor: "rgba(34,34,68,0.4)",
     selectors: {
       "&.active": {
         backgroundColor: "#222244",

@@ -7,6 +7,7 @@ import { useTippy } from "solid-tippy";
 import { CommitInfo, commitLookup$, SignatureInfo } from "../repoState";
 import * as classes from "./CommitDetails.css";
 import { setActiveCommit } from "../RepoGrid/activeCommit";
+import { buttonLink } from "@/style.css";
 
 export const CommitDetails = (props: { commit: CommitInfo }) => {
   const [anchor, setAnchor] = createSignal<HTMLDivElement>();
@@ -30,8 +31,8 @@ export const CommitDetails = (props: { commit: CommitInfo }) => {
       <div class={qs("horizontalFlex")}>
         <div class={qs("boxFill")}>
           {props.commit.id.substring(0, 7)}
-          <a
-            href="#"
+          <button
+            class={buttonLink}
             ref={setAnchor}
             onClick={async (evt) => {
               evt.preventDefault();
@@ -40,7 +41,7 @@ export const CommitDetails = (props: { commit: CommitInfo }) => {
             }}
           >
             <AiOutlineCopy />
-          </a>
+          </button>
         </div>
         <div class={qs("boxAuto")}>
           {new Date(props.commit.time * 1000).toLocaleString()}
@@ -100,9 +101,9 @@ const CommitLink = (props: { children: string }) => {
   });
 
   return (
-    <a
+    <button
+      class={buttonLink}
       ref={setAnchor}
-      href="#"
       onClick={(evt) => {
         evt.preventDefault();
         setActiveCommit(props.children);
@@ -110,6 +111,6 @@ const CommitLink = (props: { children: string }) => {
     >
       {" "}
       {props.children.substring(0, 7)}
-    </a>
+    </button>
   );
 };

@@ -31,6 +31,8 @@ export const Grid = <T,>(props: {
     const [isHovering, setIsHovering] = createSignal(false);
 
     return (
+      // TODO
+      // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
       <div
         class={classNames(
           classes.itemContainer,
@@ -103,7 +105,11 @@ export const Grid = <T,>(props: {
           <Cell width={getColumnWidth(props)} class={props.headerClass}>
             <span>{props.header}</span>
             <Show when={props.minWidth !== undefined}>
-              <div class={classes.resizer} onMouseDown={onMouseDown} />
+              <div
+                class={classes.resizer}
+                onMouseDown={onMouseDown}
+                role="presentation"
+              />
             </Show>
           </Cell>
         );
@@ -120,6 +126,7 @@ export const Grid = <T,>(props: {
       }}
       ref={scrollTargetElement}
       onKeyDown={(evt) => props.onKeyDown?.(evt)}
+      role="presentation"
     >
       <div class={classes.headerContainer}>{getHeaders()}</div>
       <VirtualContainer

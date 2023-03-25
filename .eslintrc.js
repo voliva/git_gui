@@ -6,7 +6,7 @@ module.exports = {
   extends: [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
-    // "plugin:jsx-a11y/recommended",
+    "plugin:jsx-a11y/recommended",
     "plugin:solid/recommended",
   ],
   overrides: [],
