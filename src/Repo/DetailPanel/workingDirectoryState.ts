@@ -10,7 +10,7 @@ import {
   startWith,
   switchMap,
 } from "rxjs";
-import { repo_path$ } from "../repoState";
+import { repoPath$ } from "../repoState";
 import { Delta } from "./activeCommitChangesState";
 
 export interface WorkingDirStatus {
@@ -25,7 +25,7 @@ export const workingDirectory$ = state(
     listen$<WorkingDirStatus>("working-directory").pipe(
       map((evt) => evt.payload)
     ),
-    repo_path$.pipe(
+    repoPath$.pipe(
       switchMap((path) =>
         refresh$.pipe(
           startWith(null),
@@ -39,12 +39,12 @@ export const workingDirectory$ = state(
 );
 
 export async function stage(delta?: Delta) {
-  const path = await firstValueFrom(repo_path$);
+  const path = await firstValueFrom(repoPath$);
   await invoke("stage", { delta, path });
   refresh();
 }
 export async function unstage(delta?: Delta) {
-  const path = await firstValueFrom(repo_path$);
+  const path = await firstValueFrom(repoPath$);
   await invoke("unstage", { delta, path });
   refresh();
 }

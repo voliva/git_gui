@@ -1,15 +1,15 @@
 import { qs } from "@/quickStyles";
 import classNames from "classnames";
-import { children, createSignal, For, JSXElement } from "solid-js";
+import { children, createSignal, For, JSX, JSXElement } from "solid-js";
 import * as classes from "./FullTabs.css";
 
 export const FullTabs = (props: {
   class?: string;
-  children: any;
+  children: JSX.Element;
   onTabChange?: (tab: FullTabProps) => void;
 }) => {
   const resolved = children(() => props.children);
-  const firstTab = (resolved.toArray() as any as FullTabProps[]).find(
+  const firstTab = (resolved.toArray() as unknown[] as FullTabProps[]).find(
     (tab) => tab && !tab.disabled
   );
   const [activeView, setActiveView] = createSignal(firstTab);
@@ -19,7 +19,7 @@ export const FullTabs = (props: {
       <div class={qs("horizontalFlex", "noOverflow", "boxAuto")}>
         <For each={resolved.toArray()}>
           {(item) => {
-            const tabProps = item as any as FullTabProps | null;
+            const tabProps = item as unknown as FullTabProps | null;
             if (!tabProps) return null;
 
             return (
@@ -57,4 +57,4 @@ export interface FullTabProps {
   disabled?: boolean;
 }
 
-export const FullTab = (props: FullTabProps) => props as any;
+export const FullTab = (props: FullTabProps) => props as unknown as JSX.Element;

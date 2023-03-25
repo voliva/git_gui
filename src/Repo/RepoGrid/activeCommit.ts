@@ -1,3 +1,4 @@
+import { isNotNullish } from "@/rxState";
 import { state } from "@react-rxjs/core";
 import { createSignal } from "@react-rxjs/utils";
 import {
@@ -13,12 +14,12 @@ import {
   commitLookup$,
   PositionedCommit,
   refs$,
-  repo_path$,
+  repoPath$,
 } from "../repoState";
 
 export const [commitChange$, setActiveCommit] = createSignal<string>();
 export const activeCommit$ = state(
-  repo_path$.pipe(
+  repoPath$.pipe(
     switchMap(() =>
       concat(
         refs$.pipe(
@@ -32,9 +33,9 @@ export const activeCommit$ = state(
 );
 
 const relatedCache$ = activeCommit$.pipeState(
-  filter((v) => v !== null),
+  filter(isNotNullish),
   map((id) => ({
-    id: id!,
+    id,
     relatedLookup: {} as Record<string, boolean>,
   }))
 );
@@ -96,7 +97,7 @@ export function getIsActive(
       }
 
       const targetCommit = commits[id];
-      for (let id of targetCommit.descendants) {
+      for (const id of targetCommit.descendants) {
         const descendant = commits[id];
         if (!descendant) continue;
 
@@ -154,7 +155,7 @@ export function getIsActive(
       }
 
       const targetCommit = commits[id];
-      for (let id of targetCommit.commit.parents) {
+      for (const id of targetCommit.commit.parents) {
         const parent = commits[id];
         if (!parent) continue;
 

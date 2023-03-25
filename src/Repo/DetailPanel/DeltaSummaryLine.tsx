@@ -10,13 +10,13 @@ import {
 import { createSignal, JSX } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useTippy } from "solid-tippy";
-import { Delta, File, FileChange } from "./ActiveCommitChanges";
 import {
   changeColor,
   negativeColor,
   neutralColor,
   positiveColor,
 } from "./ActiveCommitChanges.css";
+import { Delta, File, FileChange } from "./activeCommitChangesState";
 import * as classes from "./DeltaSummaryLine.css";
 
 export const DeltaSummary = (props: {
@@ -142,5 +142,6 @@ function switchChangeType<T>(
   if ("Modified" in value && options.Modified) {
     return options.Modified(value.Modified);
   }
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   return defaultValue!;
 }

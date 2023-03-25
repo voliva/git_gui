@@ -1,7 +1,7 @@
 import { CellRendererProps, Column } from "@/components/Grid";
 import { readState } from "@/rxState";
 import { appBgColor } from "@/style.css";
-import { createEffect, createMemo } from "solid-js";
+import { createEffect, createMemo, createSignal } from "solid-js";
 import { BranchPath, PositionedCommit } from "../repoState";
 import { activeCommit$ } from "./activeCommit";
 import { ITEM_HEIGHT } from "./itemHeight";
@@ -39,7 +39,7 @@ export const GraphColumn = (props: { commits: PositionedCommit[] | null }) => {
   );
 };
 
-let BASE_COLOR = 150;
+const BASE_COLOR = 150;
 
 // 200 because I want to start on blueish
 // 137.50776 because it's the most irrational turn, meaning it will go around and around repeating as least as posible
@@ -50,11 +50,14 @@ const getColor = (i: number) => `hsl(${BASE_COLOR + i * 53}, 100%, 75%)`;
 
 const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
   const activeId = readState(activeCommit$, null);
-  let ref!: HTMLCanvasElement;
+  const [getRef, setRef] = createSignal<HTMLCanvasElement | null>(null);
 
   createEffect(() => {
     const position = props.item.position;
-    const ctx = ref.getContext("2d")!;
+    const ref = getRef();
+    const ctx = ref?.getContext("2d");
+    if (!ref || !ctx) return;
+
     const width = props.width ?? ref.width; // We need to call props.width to have this re-render when width changes.
 
     ctx.clearRect(0, 0, width, ref.height);
@@ -73,7 +76,7 @@ const GraphCell = (props: CellRendererProps<PositionedCommit>) => {
       height={ITEM_HEIGHT}
       width={props.width ?? 100}
       class={classes.commitGraph}
-      ref={ref}
+      ref={setRef}
     />
   );
 };
@@ -83,9 +86,11 @@ const gravatarImages = new Map<
   Promise<HTMLImageElement> | HTMLImageElement
 >();
 const getGravatarImage = (hash: string) => {
-  if (gravatarImages.has(hash)) {
-    return gravatarImages.get(hash)!;
+  let cachedImage = gravatarImages.get(hash);
+  if (cachedImage) {
+    return cachedImage;
   }
+
   const promise = new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.addEventListener(
@@ -96,14 +101,23 @@ const getGravatarImage = (hash: string) => {
       },
       { once: true }
     );
-    img.addEventListener("error", (e) => reject(e), { once: true });
+    img.addEventListener(
+      "error",
+      (e) => {
+        setTimeout(() => gravatarImages.delete(hash), 1000);
+        reject(e);
+      },
+      { once: true }
+    );
     img.src = `https://www.gravatar.com/avatar/${hash}?s=${
       COMMIT_RADIUS * 2
     }&d=retro`;
   });
+
   // Depending on runtime and cache maybe this can happen?
-  if (gravatarImages.has(hash)) {
-    return gravatarImages.get(hash)!;
+  cachedImage = gravatarImages.get(hash);
+  if (cachedImage) {
+    return cachedImage;
   }
   gravatarImages.set(hash, promise);
   return promise;

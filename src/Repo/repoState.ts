@@ -1,3 +1,4 @@
+import { isNotNullish } from "@/rxState";
 import { listen$, streamCommand$ } from "@/tauriRx";
 import { state } from "@react-rxjs/core";
 import { createSignal } from "@react-rxjs/utils";
@@ -21,20 +22,16 @@ import {
   ObservableInput,
   scan,
   share,
-  skip,
   startWith,
   Subscription,
   switchMap,
   take,
-  tap,
-  throttleTime,
   timer,
-  toArray,
   withLatestFrom,
 } from "rxjs";
 
 export const [triggerOpen$, openRepo] = createSignal();
-export const repo_path$ = state(
+export const repoPath$ = state(
   concat(
     defer(() => invoke<string | null>("get_last_repo")),
     merge(
@@ -44,10 +41,7 @@ export const repo_path$ = state(
       ),
       listen$<string>("repo_change").pipe(map((v) => v.payload))
     )
-  ).pipe(
-    filter((v) => Boolean(v)),
-    map((v) => v!)
-  ),
+  ).pipe(filter(isNotNullish)),
   null
 );
 
@@ -90,7 +84,7 @@ export const [startFetch$, fetch] = createSignal();
 export const isFetching$ = state(
   // merge(startFetch$, hasFocus$.pipe(filter((hasFocus) => hasFocus))).pipe(
   startFetch$.pipe(
-    withLatestFrom(repo_path$),
+    withLatestFrom(repoPath$),
     losslessExhaustMap(([, path]) =>
       concat(
         [true],
@@ -120,19 +114,17 @@ const shouldUpdateRepo$ = defer(() => repoEvents$).pipe(
   ),
   connect((shared$) =>
     hasFocus$.pipe(
-      skip(1),
-      switchMap((hasFocus) =>
+      switchMap((hasFocus, i) =>
         shared$.pipe(
           debounceTime(hasFocus ? 100 : 2_000),
-          hasFocus ? startWith(null) : (v) => v
+          hasFocus || i === 0 ? startWith(null) : (v) => v
         )
       )
     )
-  ),
-  startWith(null)
+  )
 );
 
-const commitEvent$ = repo_path$.pipe(
+const commitEvent$ = repoPath$.pipe(
   switchMap((path) =>
     shouldUpdateRepo$.pipe(
       exhaustMap(() =>
@@ -239,11 +231,12 @@ export interface Refs {
 }
 
 const getRefs$ = (path: string) => invoke<Array<RustRef>>("get_refs", { path });
-export const refs$ = repo_path$.pipeState(
+export const refs$ = repoPath$.pipeState(
+  filter(isNotNullish),
   switchMap((path) =>
     shouldUpdateRepo$.pipe(
       losslessExhaustMap(() =>
-        from(getRefs$(path!)).pipe(
+        from(getRefs$(path)).pipe(
           catchError((err) => {
             console.error(err);
             console.error("Error happened on `refs$`");
@@ -331,7 +324,7 @@ interface WatchNotification {
   type: EventKind;
 }
 
-const repoEvents$ = repo_path$.pipe(
+const repoEvents$ = repoPath$.pipe(
   distinctUntilChanged(),
   switchMap((path) => {
     if (!path) return EMPTY;

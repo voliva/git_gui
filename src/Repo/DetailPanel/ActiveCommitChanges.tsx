@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { qs } from "@/quickStyles";
 import { readState } from "@/rxState";
 import { For, Show } from "solid-js";
@@ -14,7 +15,7 @@ export const ActiveCommitChanges = () => {
         <ChangeCount changes={changes()!} />
         <div class={qs("boxFill", "overflowVertical")}>
           <ul>
-            <For each={changes()!.deltas}>
+            <For each={changes()?.deltas}>
               {(delta) => <DeltaSummary delta={delta} />}
             </For>
           </ul>

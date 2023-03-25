@@ -14,7 +14,7 @@ import {
 } from "rxjs";
 import { createSignal as solidCreateSignal, For } from "solid-js";
 import { setActiveCommit } from "../RepoGrid/activeCommit";
-import { commitLookup$, refs$, repo_path$ } from "../repoState";
+import { commitLookup$, refs$, repoPath$ } from "../repoState";
 import { Delta } from "./activeCommitChangesState";
 import { DeltaSummary } from "./DeltaSummaryLine";
 import * as classes from "./WorkingDirectory.css";
@@ -223,7 +223,7 @@ const CreateCommit = () => {
         class={classes.commitBtn}
         disabled={commitBtnDisabled()}
         onClick={async () => {
-          const path = await firstValueFrom(repo_path$);
+          const path = await firstValueFrom(repoPath$);
           const message = await firstValueFrom(commitMessage$);
           const id = await invoke<string>("commit", {
             path,

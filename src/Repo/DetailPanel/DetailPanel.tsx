@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { FullTab, FullTabs } from "@/components/Tabs/FullTabs";
 import { qs } from "@/quickStyles";
-import { readState } from "@/rxState";
+import { isNotNullish, readState } from "@/rxState";
 import { state } from "@react-rxjs/core";
 import { combineLatest, distinctUntilChanged, filter, map } from "rxjs";
 import { Show } from "solid-js";
@@ -26,12 +27,9 @@ export const DetailPanel = () => {
 };
 
 const commit$ = state(
-  combineLatest([
-    activeCommit$.pipe(filter((c) => c !== null)),
-    commitLookup$,
-  ]).pipe(
-    filter(([id, commits]) => id! in commits),
-    map(([id, commits]) => commits[id!].commit),
+  combineLatest([activeCommit$.pipe(filter(isNotNullish)), commitLookup$]).pipe(
+    filter(([id, commits]) => id in commits),
+    map(([id, commits]) => commits[id].commit),
     distinctUntilChanged()
   )
 );

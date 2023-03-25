@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Grid } from "@/components/Grid";
 import { boxFill } from "@/quickStyles.css";
 import { readState } from "@/rxState";
@@ -26,10 +27,11 @@ export function RepoGrid() {
 
     const id = activeId();
     const commitList = commits();
+    if (!commitList) return;
     const currentIdx =
-      commitList?.findIndex((commit) => commit.commit.id === id) ?? -1;
+      commitList.findIndex((commit) => commit.commit.id === id) ?? -1;
     if (currentIdx >= 0) {
-      const nextId = commitList![currentIdx + dir].commit.id;
+      const nextId = commitList[currentIdx + dir].commit.id;
       if (nextId) {
         setActiveCommit(nextId);
       }

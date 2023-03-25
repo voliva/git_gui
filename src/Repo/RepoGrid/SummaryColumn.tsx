@@ -15,7 +15,7 @@ import {
   PositionedCommit,
   RefType,
   RemoteRef,
-  repo_path$,
+  repoPath$,
 } from "../repoState";
 import { isRelatedToActive$ } from "./activeCommit";
 import { LookedUpRef, RefGroup, refsLookup$ } from "./refsLookup";
@@ -117,7 +117,6 @@ const TagGroup = (props: { group: RefGroup }) => {
     const isHead = Boolean(props.group.refs[RefType.Head]);
     if (isHead) return;
 
-    console.log("get working dir");
     const workingDir = await firstValueFrom(workingDirectory$);
     if (workingDir.staged_deltas.length || workingDir.unstaged_deltas.length) {
       await message(
@@ -126,8 +125,7 @@ const TagGroup = (props: { group: RefGroup }) => {
       return;
     }
 
-    console.log("get path");
-    const path = await firstValueFrom(repo_path$);
+    const path = await firstValueFrom(repoPath$);
 
     const localBranch = props.group.refs[RefType.LocalBranch]?.[0];
     if (localBranch) {
@@ -152,7 +150,10 @@ const TagGroup = (props: { group: RefGroup }) => {
     }
 
     // It has to be a tag. Checkout commit.
-    await checkoutCommit(props.group.refs[RefType.Tag]![0].ref.id);
+    const tagGroup = props.group.refs[RefType.Tag];
+    if (tagGroup) {
+      await checkoutCommit(tagGroup[0].ref.id);
+    }
   };
 
   return (
@@ -186,7 +187,7 @@ async function checkoutCommit(id: string) {
     return;
   }
 
-  const path = await firstValueFrom(repo_path$);
+  const path = await firstValueFrom(repoPath$);
 
   await invoke("checkout_commit", {
     path,

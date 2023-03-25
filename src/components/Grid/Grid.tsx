@@ -4,16 +4,16 @@ import {
   VirtualItemSize,
 } from "@minht11/solid-virtual-container";
 import { ReactiveWeakMap } from "@solid-primitives/map";
+import classNames from "classnames";
 import { children, createSignal, For, JSX, JSXElement, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import * as classes from "./Grid.css";
-import classNames from "classnames";
 
-export const Grid = <T extends any>(props: {
+export const Grid = <T,>(props: {
   class?: string;
   items: T[];
   itemSize: VirtualItemSize;
-  children: any;
+  children: JSX.Element;
   itemClass?: (item: T) => string | null | undefined;
   onRowClick?: (item: T) => void;
   onKeyDown?: JSX.EventHandlerUnion<HTMLDivElement, KeyboardEvent>;
@@ -47,7 +47,7 @@ export const Grid = <T extends any>(props: {
       >
         <For each={resolved.toArray()}>
           {(item, columnIndex) => {
-            const props = item as any as ColumnProps | null;
+            const props = item as unknown as ColumnProps | null;
             if (!props) return null;
 
             return (
@@ -73,7 +73,7 @@ export const Grid = <T extends any>(props: {
   const getHeaders = () => (
     <For each={resolved.toArray()}>
       {(item) => {
-        const props = item as any as ColumnProps | null;
+        const props = item as unknown as ColumnProps | null;
         if (!props) return null;
 
         const onMouseDown = (evt: MouseEvent) => {
@@ -165,14 +165,15 @@ export interface CellRendererProps<T> {
   isHovering: boolean;
 }
 
-export interface ColumnProps {
+export interface ColumnProps<T = unknown> {
   header?: string;
   minWidth?: number;
   maxWidth?: number;
   width?: number;
   itemClass?: string;
   headerClass?: string;
-  children: (props: CellRendererProps<any>) => JSXElement;
+  children: (props: CellRendererProps<T>) => JSXElement;
 }
 
-export const Column = (props: ColumnProps) => props as any;
+export const Column = <T,>(props: ColumnProps<T>) =>
+  props as unknown as JSX.Element;

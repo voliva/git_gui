@@ -19,6 +19,7 @@ export function readState<T>(
   defaultValue?: T
 ) {
   const [value, setValue] = createSignal(
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     "getDefaultValue" in state ? state.getDefaultValue() : defaultValue!
   );
 
@@ -73,3 +74,7 @@ export function readParametricState<T, A>(
 
   return readState(state(obs$), getDefaultValue(sample));
 }
+
+export const isNullish = <T>(v: T | null | undefined): v is null | undefined =>
+  v == null;
+export const isNotNullish = <T>(v: T | null | undefined): v is T => v != null;

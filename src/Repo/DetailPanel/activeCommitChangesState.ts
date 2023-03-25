@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api";
 import { filter, from, startWith, switchMap, withLatestFrom } from "rxjs";
 import { activeCommit$ } from "../RepoGrid/activeCommit";
-import { repo_path$ } from "../repoState";
+import { repoPath$ } from "../repoState";
 
 export interface File {
   id: string;
@@ -29,7 +29,7 @@ export interface CommitContents {
 
 export const commitChanges$ = activeCommit$.pipeState(
   filter((v) => v !== null),
-  withLatestFrom(repo_path$),
+  withLatestFrom(repoPath$),
   switchMap(([id, path]) =>
     from(invoke<CommitContents>("get_commit", { path, id })).pipe(
       startWith(null)
