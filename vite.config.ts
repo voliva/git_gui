@@ -3,12 +3,19 @@
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import path from "path";
 import { defineConfig } from "vite";
-import solidPlugin from "vite-plugin-solid";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
+import sveltePreprocess from "svelte-preprocess";
 import eslint from "vite-plugin-eslint";
 
 export default defineConfig({
   plugins: [
-    solidPlugin(),
+    svelte({
+      preprocess: [
+        sveltePreprocess({
+          typescript: true,
+        }),
+      ],
+    }),
     vanillaExtractPlugin(),
     eslint({
       failOnWarning: !process.env.TAURI_DEBUG,

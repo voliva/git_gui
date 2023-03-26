@@ -1,7 +1,9 @@
 {
   "name": "git-gui-tauri",
+  "private": true,
   "version": "0.0.0",
   "description": "",
+  "type": "module",
   "scripts": {
     "start": "vite",
     "dev": "vite",
@@ -14,7 +16,9 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^2.0.3",
     "@tauri-apps/cli": "^1.2.2",
+    "@tsconfig/svelte": "^3.0.0",
     "@types/node": "^18.7.10",
     "@types/uuid": "^9.0.1",
     "@typescript-eslint/eslint-plugin": "^5.56.0",
@@ -25,24 +29,21 @@
     "eslint-plugin-solid": "^0.11.0",
     "jsdom": "^21.1.0",
     "prettier": "^2.8.7",
+    "svelte": "^3.57.0",
+    "svelte-check": "^3.1.4",
+    "svelte-preprocess": "^5.0.3",
     "typescript": "^4.7.4",
     "vite": "^4.0.0",
     "vite-plugin-eslint": "^1.8.1",
-    "vite-plugin-solid": "^2.3.0",
     "vitest": "^0.29.2"
   },
   "dependencies": {
-    "@minht11/solid-virtual-container": "^0.2.1",
     "@react-rxjs/core": "^0.10.3",
     "@react-rxjs/utils": "^0.9.5",
-    "@solid-primitives/map": "^0.4.0",
     "@tauri-apps/api": "^1.2.0",
     "@vanilla-extract/css": "^1.9.5",
     "classnames": "^2.3.2",
     "rxjs": "^7.8.0",
-    "solid-icons": "^1.0.4",
-    "solid-js": "^1.4.7",
-    "solid-tippy": "^0.2.1",
     "uuid": "^9.0.0"
   }
 }
