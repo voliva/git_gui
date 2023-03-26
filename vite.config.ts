@@ -1,13 +1,11 @@
-/// <reference types="vitest" />
-
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
-import path from "path";
 import { defineConfig } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import sveltePreprocess from "svelte-preprocess";
 import eslint from "vite-plugin-eslint";
 
-export default defineConfig({
+// https://vitejs.dev/config/
+export default defineConfig(async () => ({
   plugins: [
     svelte({
       preprocess: [
@@ -22,11 +20,7 @@ export default defineConfig({
       failOnError: !process.env.TAURI_DEBUG,
     }),
   ],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "src"),
-    },
-  },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   // prevent vite from obscuring rust errors
   clearScreen: false,
@@ -46,5 +40,4 @@ export default defineConfig({
     // produce sourcemaps for debug builds
     sourcemap: !!process.env.TAURI_DEBUG,
   },
-  test: {},
-});
+}));
