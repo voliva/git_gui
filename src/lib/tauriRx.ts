@@ -15,7 +15,8 @@ import {
   tap,
   withLatestFrom,
 } from "rxjs";
-import { listen, Event } from "@tauri-apps/api/event";
+import type { Event } from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 import { v4 } from "uuid";
 import { invoke } from "@tauri-apps/api";
 

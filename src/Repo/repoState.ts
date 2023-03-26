@@ -1,5 +1,5 @@
-import { isNotNullish } from "@/rxState";
-import { listen$, streamCommand$ } from "@/tauriRx";
+import { isNotNullish } from "@/lib/rxState";
+import { listen$, streamCommand$ } from "@/lib/tauriRx";
 import { state } from "@react-rxjs/core";
 import { createSignal } from "@react-rxjs/utils";
 import { invoke } from "@tauri-apps/api";
@@ -19,7 +19,6 @@ import {
   map,
   merge,
   Observable,
-  ObservableInput,
   scan,
   share,
   startWith,
@@ -28,6 +27,7 @@ import {
   take,
   timer,
   withLatestFrom,
+  type ObservableInput,
 } from "rxjs";
 
 export const [triggerOpen$, openRepo] = createSignal();
