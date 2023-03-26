@@ -37,7 +37,7 @@ globalStyle("html, body", {
   overflow: "hidden",
 });
 
-globalStyle("#root", {
+globalStyle("#app", {
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",

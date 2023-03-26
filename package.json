@@ -45,6 +45,7 @@
     "@vanilla-extract/css": "^1.9.5",
     "classnames": "^2.3.2",
     "rxjs": "^7.8.0",
+    "svelte-virtual-scroll-list": "^1.1.0",
     "uuid": "^9.0.0"
   }
 }

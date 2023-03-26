@@ -68,6 +68,7 @@ export interface BranchPath {
 }
 
 export interface PositionedCommit {
+  id: string;
   commit: CommitInfo;
   descendants: Array<string>;
   position: number;
@@ -121,7 +122,8 @@ const shouldUpdateRepo$ = defer(() => repoEvents$).pipe(
         )
       )
     )
-  )
+  ),
+  take(1)
 );
 
 const commitEvent$ = repoPath$.pipe(
@@ -130,9 +132,17 @@ const commitEvent$ = repoPath$.pipe(
       exhaustMap(() =>
         concat(
           [{ type: "start" as const }],
-          streamCommand$<PositionedCommit>("get_commits", {
+          streamCommand$<Omit<PositionedCommit, "id">>("get_commits", {
             path,
-          }).pipe(map((payload) => ({ type: "update" as const, payload }))),
+          }).pipe(
+            map((payload) => ({
+              type: "update" as const,
+              payload: {
+                ...payload,
+                id: payload.commit.id,
+              },
+            }))
+          ),
           [{ type: "end" as const }]
         )
       )
