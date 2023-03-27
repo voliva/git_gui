@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PositionedCommit } from "../repoState";
+import type { PositionedCommit } from "../repoState";
 import { getIsActive } from "./activeCommit";
 
 describe("activeCommit", () => {

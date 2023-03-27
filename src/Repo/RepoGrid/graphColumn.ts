@@ -23,6 +23,7 @@ export const getMaxWidth = (commits: PositionedCommit[]) => {
   return getPositionMaxX(position + 1); // Add one to account for gradient
 };
 export const getInitialWidth = () => getPositionX(3);
+export const getMinWidth = () => COMMIT_RADIUS * 2 + GRAPH_MARGIN * 2;
 
 const BASE_COLOR = 150;
 

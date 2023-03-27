@@ -1,21 +1,19 @@
-import { isNotNullish } from "@/rxState";
+import { isNotNullish } from "@/lib/rxState";
 import { state } from "@react-rxjs/core";
 import { createSignal } from "@react-rxjs/utils";
+import { invoke } from "@tauri-apps/api";
 import {
   combineLatest,
   concat,
   filter,
+  firstValueFrom,
   map,
   Observable,
   switchMap,
   take,
 } from "rxjs";
-import {
-  commitLookup$,
-  PositionedCommit,
-  refs$,
-  repoPath$,
-} from "../repoState";
+import type { PositionedCommit } from "../repoState";
+import { commitLookup$, refs$, repoPath$ } from "../repoState";
 
 export const [commitChange$, setActiveCommit] = createSignal<string>();
 export const activeCommit$ = state(
@@ -209,3 +207,20 @@ export const isRelatedToActive$ = state(
       // })
     )
 );
+
+export async function checkoutCommit(id: string) {
+  if (
+    !(await confirm(
+      "You are about to checkout the commit in detached mode. Make sure to create a branch or your changes could be lost"
+    ))
+  ) {
+    return;
+  }
+
+  const path = await firstValueFrom(repoPath$);
+
+  await invoke("checkout_commit", {
+    path,
+    id,
+  });
+}

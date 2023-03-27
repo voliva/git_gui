@@ -1,24 +1,6 @@
 import { style } from "@vanilla-extract/css";
-import { repoGridRow } from "./RepoGrid.css";
 
-export const summaryCell = style({
-  flex: "1 1 auto",
-  width: "100%",
-  maxWidth: "calc(100% - 10px)",
-  padding: "0px 0.2rem",
-  display: "flex",
-  alignItems: "center",
-  gap: "0.2rem",
-  maxHeight: "100%",
-});
-
-export const unrelatedCell = style({
-  opacity: 0.6,
-});
-
-export const summaryHeader = style({
-  padding: "0px 0.2rem",
-});
+export const repoGridRow = style({});
 
 export const commitRefs = style({
   flex: "0 0 auto",
@@ -30,10 +12,10 @@ export const commitRefs = style({
   zIndex: 1, // Above commit message when overflowing
   // For hosting multi-tags
   alignSelf: "flex-start",
-  marginTop: 3,
+  marginTop: 5,
 });
 
-export const refTag = style({
+export const commitTagGroup = style({
   fontSize: "0.8rem",
   lineHeight: 1,
   display: "inline-flex",

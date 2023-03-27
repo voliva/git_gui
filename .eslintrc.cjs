@@ -29,5 +29,6 @@ module.exports = {
   plugins: ["@typescript-eslint", "jsx-a11y"],
   rules: {
     "no-inner-declarations": "off",
+    "svelte/no-inner-declarations": "off",
   },
 };

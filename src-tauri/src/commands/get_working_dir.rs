@@ -1,4 +1,4 @@
-use git2::{DiffOptions, Repository, StatusOptions};
+use git2::{Repository, StatusOptions};
 use logging_timer::time;
 use serde::Serialize;
 
