@@ -8,6 +8,7 @@
   import CommitCell from "./CommitCell.svelte";
   import { activeCommit$, setActiveCommit } from "./activeCommit";
   import { repoGridRow } from "./commitRefs.css";
+  import { ITEM_HEIGHT } from "./gridConstants";
 
   const RESIZER_WIDTH = 7;
   const activeCommitBgColor = "#222244";
@@ -15,8 +16,10 @@
 
   let canvasWidth = getInitialWidth();
   let hoveringRow: string | null = null;
+  let gridHeight: number | null = null;
 
   $: graphColumnWidth = canvasWidth + RESIZER_WIDTH;
+  $: keeps = gridHeight ? Math.ceil((1.4 * gridHeight) / ITEM_HEIGHT) : 30;
 
   const onGraphResizerMouseDown = (evt: MouseEvent) => {
     const initialWidth = graphColumnWidth;
@@ -39,14 +42,39 @@
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
   };
+
+  function watchHeight(el: HTMLDivElement) {
+    let lastHeight: number | null = null;
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (lastHeight !== entry.contentRect.height) {
+          gridHeight = lastHeight = entry.contentRect.height;
+        }
+      }
+    });
+    resizeObserver.observe(el);
+
+    return {
+      destroy() {
+        resizeObserver.unobserve(el);
+      },
+    };
+  }
 </script>
 
 {#if $commits$}
   <div
+    use:watchHeight
     class={classNames(boxFill, "repoGrid")}
     style="--active-commit-bg-color: {activeCommitBgColor}; --hover-bg-color: {hoverBgColor};"
   >
-    <VirtualScroll data={$commits$} key="id" let:data>
+    <VirtualScroll
+      data={$commits$}
+      key="id"
+      estimateSize={ITEM_HEIGHT}
+      {keeps}
+      let:data
+    >
       <div
         class={classNames("row", repoGridRow, {
           "active-commit": $activeCommit$ === data.id,
