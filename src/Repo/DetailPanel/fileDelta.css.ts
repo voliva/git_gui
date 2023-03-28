@@ -1,6 +1,6 @@
 import { textEllipsis } from "@/quickStyles.css";
 import { style } from "@vanilla-extract/css";
-import { hoverBgColor } from "../RepoGrid/RepoGrid.css";
+import { hoverBgColor } from "../RepoGrid/gridConstants";
 
 export const detailPanelContainer = style({
   display: "flex",

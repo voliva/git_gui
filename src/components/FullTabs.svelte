@@ -3,7 +3,7 @@
   import classNames from "classnames";
   import { createEventDispatcher } from "svelte";
 
-  let className: string = "";
+  let className = "";
   export { className as class };
   export let options: Array<{
     id: string;

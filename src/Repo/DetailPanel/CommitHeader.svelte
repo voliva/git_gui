@@ -14,8 +14,8 @@
 
 <div>
   <div class={commitText}>
-    <h4>{commit.summary}</h4>
-    <p>{commit.body}</p>
+    <h4>{commit.summary ?? ""}</h4>
+    <p>{commit.body ?? ""}</p>
   </div>
   <div class={qs("horizontalFlex")}>
     <div class={qs("boxFill")}>
@@ -43,6 +43,3 @@
     </div>
   </div>
 </div>
-
-<style>
-</style>

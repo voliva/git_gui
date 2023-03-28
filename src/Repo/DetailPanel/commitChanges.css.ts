@@ -1,14 +1,4 @@
-import { boxFill, verticalFlex } from "@/quickStyles.css";
 import { style, styleVariants } from "@vanilla-extract/css";
-
-export const commitChangeContainer = style([
-  boxFill,
-  verticalFlex,
-  {
-    padding: "0 0.5rem",
-    overflow: "hidden",
-  },
-]);
 
 export const positiveColor = "#a0ffa0";
 export const changeColor = "#ffd050";

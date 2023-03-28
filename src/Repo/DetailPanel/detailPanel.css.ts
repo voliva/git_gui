@@ -18,3 +18,14 @@ export const commitText = style({
   overflowY: "auto",
   overflowX: "clip",
 });
+
+export const commitAuthor = style({
+  display: "flex",
+  margin: "0.5rem 0",
+  alignItems: "center",
+  overflow: "hidden",
+  background: deepBgColor,
+  borderRadius: 5,
+  padding: "0.2rem 0.5rem",
+  gap: "0.5rem",
+});
