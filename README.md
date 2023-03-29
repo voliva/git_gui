@@ -16,7 +16,7 @@ It ain't much, but it's honest work
 
 ## Development
 
-As mentioned, this is a [Tauri](https://tauri.app/) project. The UI is made with SolidJS in the folder `src`. The BE is in Rust and it's in `src-tauri`.
+As mentioned, this is a [Tauri](https://tauri.app/) project. The UI is made with Svelte in the folder `src`. The BE is in Rust and it's in `src-tauri`.
 
 You'll need to have Rust and NodeJS installed.
 
