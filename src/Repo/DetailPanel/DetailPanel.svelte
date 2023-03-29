@@ -2,6 +2,7 @@
   import FullTabs from "@/components/FullTabs.svelte";
   import CommitDetails from "./CommitDetails.svelte";
   import { detailPanelContainer } from "./detailPanel.css";
+  import WorkingDirectory from "./WorkingDirectory.svelte";
 </script>
 
 <FullTabs
@@ -21,7 +22,7 @@
   {#if id === "details"}
     <CommitDetails />
   {:else if id == "workingDir"}
-    <div>Working Dir</div>
+    <WorkingDirectory />
   {/if}
 </FullTabs>
 

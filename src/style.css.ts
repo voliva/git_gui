@@ -31,6 +31,9 @@ globalStyle(":root", {
     [appBackground]: appBgColor,
     [deepBackground]: deepBgColor,
     [appForeground]: "#f6f6f6",
+    "--app-fg-color": "#f6f6f6",
+    "--app-bg-color": appBgColor,
+    "--deep-bg-color": deepBgColor,
   },
 });
 
