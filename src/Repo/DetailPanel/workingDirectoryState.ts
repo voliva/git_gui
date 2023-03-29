@@ -1,4 +1,4 @@
-import { listen$ } from "@/tauriRx";
+import { listen$ } from "@/lib/tauriRx";
 import { state } from "@react-rxjs/core";
 import { createSignal } from "@react-rxjs/utils";
 import { invoke } from "@tauri-apps/api";
@@ -11,7 +11,7 @@ import {
   switchMap,
 } from "rxjs";
 import { repoPath$ } from "../repoState";
-import { Delta } from "./activeCommitChangesState";
+import type { Delta } from "./activeCommitChangesState";
 
 export interface WorkingDirStatus {
   unstaged_deltas: Delta[];

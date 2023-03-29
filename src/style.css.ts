@@ -1,6 +1,7 @@
 import { createVar, globalStyle, style } from "@vanilla-extract/css";
 
 export const appBackground = createVar();
+export const deepBackground = createVar();
 export const appForeground = createVar();
 
 export const appBgColor = "#2f2f2f";
@@ -28,7 +29,11 @@ globalStyle(":root", {
 
   vars: {
     [appBackground]: appBgColor,
+    [deepBackground]: deepBgColor,
     [appForeground]: "#f6f6f6",
+    "--app-fg-color": "#f6f6f6",
+    "--app-bg-color": appBgColor,
+    "--deep-bg-color": deepBgColor,
   },
 });
 
@@ -37,7 +42,7 @@ globalStyle("html, body", {
   overflow: "hidden",
 });
 
-globalStyle("#root", {
+globalStyle("#app", {
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
@@ -56,6 +61,7 @@ globalStyle("a:hover", {
 
 globalStyle("svg", {
   outline: "none",
+  fill: "currentColor",
 });
 
 globalStyle("h1, h2, h3, h4, h5, p", {
