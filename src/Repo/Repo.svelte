@@ -1,15 +1,21 @@
 <script lang="ts">
   import { qs } from "@/quickStyles";
   import DetailPanel from "./DetailPanel/DetailPanel.svelte";
+  import DiffView from "./DiffView/DiffView.svelte";
+  import { selectedDelta$ } from "./DiffView/diffViewState";
   import RepoGrid from "./RepoGrid/RepoGrid.svelte";
   import RepoHeader from "./RepoHeader.svelte";
 </script>
 
-<div class={qs("verticalFlex", "noOverflow")}>
+<div class={qs("verticalFlex", "noOverflow")} style="height: 100%">
   <RepoHeader />
 
   <div class={qs("boxFill", "horizontalFlex", "noOverflow")}>
-    <RepoGrid />
+    {#if $selectedDelta$}
+      <DiffView />
+    {:else}
+      <RepoGrid />
+    {/if}
     <DetailPanel />
   </div>
 </div>

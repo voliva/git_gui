@@ -46,7 +46,7 @@ globalStyle("#app", {
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-  maxHeight: "100vh",
+  height: "100vh",
 });
 
 globalStyle("a", {

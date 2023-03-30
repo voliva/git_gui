@@ -1,5 +1,6 @@
 <script lang="ts">
   import { qs } from "@/quickStyles";
+  import { setDiffDelta } from "../DiffView/diffViewState";
   import { commitChanges$ } from "./activeCommitChangesState";
   import CommitChangeCount from "./CommitChangeCount.svelte";
   import FileDelta from "./FileDelta.svelte";
@@ -11,7 +12,7 @@
     <div class={qs("boxFill", "overflowVertical")}>
       <ul>
         {#each $commitChanges$.deltas as delta}
-          <FileDelta {delta} />
+          <FileDelta {delta} on:click={() => setDiffDelta(delta)} />
         {/each}
       </ul>
     </div>

@@ -16,8 +16,10 @@
   import VscGoToFile from "svelte-icons-pack/vsc/VscGoToFile";
   import RiDocumentFileTransferLine from "svelte-icons-pack/ri/RiDocumentFileTransferLine";
   import Icon from "svelte-icons-pack";
+  import { createEventDispatcher } from "svelte";
 
   export let delta: Delta;
+  const dispatch = createEventDispatcher();
 
   $: file = switchChangeType(delta.change, {
     Added: ([v]) => v,
@@ -110,6 +112,8 @@
     placement: "left",
     content: file.path,
   }}
+  on:click={() => dispatch("click")}
+  on:keypress={(evt) => evt.code === "Enter" && dispatch("click")}
 >
   <div class={qs("horizontalFlex", "noOverflow", "centeredFlex")}>
     <span class={classes.changeIcon} style="color: {style}">
