@@ -9,7 +9,7 @@ mod settings;
 
 use crate::commands::{
     checkout_commit, checkout_local, checkout_remote, commit, fetch, get_commit, get_commits,
-    get_last_repo, get_refs, get_working_dir, open_repo, stage, stop_watch_repo, unstage,
+    get_diff, get_last_repo, get_refs, get_working_dir, open_repo, stage, stop_watch_repo, unstage,
     watch_repo,
 };
 use env_logger::Env;
@@ -34,6 +34,7 @@ fn main() {
             fetch,
             get_commit,
             get_commits,
+            get_diff,
             get_last_repo,
             get_refs,
             get_working_dir,

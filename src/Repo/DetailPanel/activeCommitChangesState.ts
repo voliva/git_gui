@@ -1,5 +1,13 @@
 import { invoke } from "@tauri-apps/api";
-import { filter, from, startWith, switchMap, withLatestFrom } from "rxjs";
+import {
+  filter,
+  firstValueFrom,
+  from,
+  startWith,
+  switchMap,
+  tap,
+  withLatestFrom,
+} from "rxjs";
 import { activeCommit$ } from "../RepoGrid/activeCommit";
 import { repoPath$ } from "../repoState";
 
@@ -34,5 +42,13 @@ export const commitChanges$ = activeCommit$.pipeState(
     from(invoke<CommitContents>("get_commit", { path, id })).pipe(
       startWith(null)
     )
-  )
+  ),
+  tap(async (v) => {
+    if (v) {
+      const path = await firstValueFrom(repoPath$);
+      invoke("get_diff", { path, delta: v.deltas[0] }).then((res) =>
+        console.log(res)
+      );
+    }
+  })
 );
