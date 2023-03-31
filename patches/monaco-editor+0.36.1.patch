@@ -1,0 +1,19 @@
+diff --git a/node_modules/monaco-editor/esm/vs/editor/browser/controller/mouseHandler.js b/node_modules/monaco-editor/esm/vs/editor/browser/controller/mouseHandler.js
+index 2697e80..5c532f1 100644
+--- a/node_modules/monaco-editor/esm/vs/editor/browser/controller/mouseHandler.js
++++ b/node_modules/monaco-editor/esm/vs/editor/browser/controller/mouseHandler.js
+@@ -173,6 +173,14 @@ export class MouseHandler extends ViewEventHandler {
+         });
+     }
+     _onMouseMove(e) {
++        let element = e.target.parentElement;
++        for (let i=0; i<5 && element; i++) {
++            if (element.classList.contains("line-delete")) {
++                // For delete lines stop doing anything, specially e.preventDefautl(), as this disables native selection.
++                return;
++            }
++            element = element.parentElement;
++        }
+         const targetIsWidget = this.mouseTargetFactory.mouseTargetIsWidget(e);
+         if (!targetIsWidget) {
+             e.preventDefault();
