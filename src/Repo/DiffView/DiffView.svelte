@@ -33,11 +33,28 @@
       readOnly: true,
       domReadOnly: true,
       automaticLayout: true,
+      showDeprecated: false,
+      // In an attempt to hide all hints...
+      inlayHints: { enabled: "off" },
+      parameterHints: { enabled: false },
+      codeLens: false,
+      quickSuggestions: false,
+      inlineSuggest: {
+        enabled: false,
+      },
+      lightbulb: {
+        enabled: false,
+      },
+      contextmenu: false,
+      // Ended up through css .monaco-editor .squiggly-hint
     });
   });
 
+  let hunksOrFile: "hunks" | "file" = "hunks";
   $: {
     if ($diffDelta$ && editor && $selectedDelta$) {
+      console.log("recompute");
+
       const [old_file, new_file] = getFileChangeFiles($selectedDelta$.change);
 
       monaco.editor.getModels().forEach((model) => model.dispose());
@@ -53,18 +70,75 @@
           getFileUri(new_file, "new")
         ),
       });
-      // https://github.com/microsoft/monaco-editor/issues/2707
-      // https://stackoverflow.com/questions/57246356/how-to-highlight-merge-conflict-blocks-in-monaco-editor-like-vscode
-      // https://microsoft.github.io/monaco-editor/playground.html?source=v0.36.1#example-interacting-with-the-editor-line-and-inline-decorations
-      // console.log(
-      //   "sha",
-      //   (editor.getOriginalEditor() as any).setHiddenAreas([
-      //     new monaco.Range(3, 1, 10, 1),
-      //   ]),
-      //   (editor.getModifiedEditor() as any).setHiddenAreas([
-      //     new monaco.Range(3, 1, 10, 1),
-      //   ])
-      // );
+
+      // TODO split reactivity for hunks/file and the actual changes.
+      // (editor.getOriginalEditor() as any).setHiddenAreas([]);
+      // (editor.getModifiedEditor() as any).setHiddenAreas([]);
+      if (hunksOrFile === "hunks") {
+        const hunks = $diffDelta$.hunks;
+        let previousLine = [1, 1];
+        const originalHiddenRanges: Array<monaco.Range> = [];
+        const modifiedHiddenRanges: Array<monaco.Range> = [];
+        hunks.forEach((hunk) => {
+          if (previousLine[0] < hunk.old_range[0]) {
+            originalHiddenRanges.push(
+              new monaco.Range(previousLine[0], 1, hunk.old_range[0], 1)
+            );
+          }
+          if (previousLine[1] < hunk.new_range[0]) {
+            modifiedHiddenRanges.push(
+              new monaco.Range(previousLine[1], 1, hunk.new_range[0], 1)
+            );
+          }
+          previousLine = [
+            hunk.old_range[0] + hunk.old_range[1],
+            hunk.new_range[0] + hunk.new_range[1],
+          ];
+        });
+        const originalLines = editor
+          .getOriginalEditor()
+          .getModel()!
+          .getLineCount();
+        const modifiedLines = editor
+          .getModifiedEditor()
+          .getModel()!
+          .getLineCount();
+        originalHiddenRanges.push(
+          new monaco.Range(previousLine[0], 1, originalLines, 1)
+        );
+        modifiedHiddenRanges.push(
+          new monaco.Range(previousLine[1], 1, modifiedLines, 1)
+        );
+        (editor.getOriginalEditor() as any).setHiddenAreas(
+          originalHiddenRanges
+        );
+        (editor.getModifiedEditor() as any).setHiddenAreas(
+          modifiedHiddenRanges
+        );
+
+        editor.getOriginalEditor().changeViewZones((accesor) => {
+          hunks.forEach((hunk, i) => {
+            const div = document.createElement("div");
+            div.innerHTML = hunk.header;
+            accesor.addZone({
+              afterLineNumber: i === 0 ? 0 : hunks[i].old_range[0],
+              heightInLines: 2,
+              domNode: div,
+            });
+          });
+        });
+        editor.getModifiedEditor().changeViewZones((accesor) => {
+          hunks.forEach((hunk, i) => {
+            const div = document.createElement("div");
+            div.innerHTML = hunk.header;
+            accesor.addZone({
+              afterLineNumber: i === 0 ? 0 : hunks[i].new_range[0],
+              heightInLines: 2,
+              domNode: div,
+            });
+          });
+        });
+      }
     }
   }
 
@@ -77,7 +151,6 @@
     const res = monaco.Uri.file(file.path).with({
       query: version,
     });
-    console.log(res);
     return res;
   }
 </script>
@@ -96,8 +169,8 @@
           renderSideBySide: false,
         })}>Unified</button
     >
-    <button>File</button>
-    <button>Hunk</button>
+    <button on:click={() => (hunksOrFile = "file")}>File</button>
+    <button on:click={() => (hunksOrFile = "hunks")}>Hunk</button>
     <button on:click={() => setDiffDelta(null)}>Close</button>
   </div>
   <div class="monaco-container" bind:this={container} />
@@ -137,5 +210,8 @@
   :global(.monaco-editor .line-delete .view-line) {
     /* So Ctrl+C keeps new lines */
     position: static;
+  }
+  :global(.monaco-editor .squiggly-hint) {
+    display: none;
   }
 </style>
