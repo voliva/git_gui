@@ -1,52 +1,23 @@
 <script lang="ts">
   import * as monaco from "monaco-editor";
   import { onMount } from "svelte";
-  import { diffDelta$ } from "./diffViewState";
+  import { diffDelta$, selectedDelta$, setDiffDelta } from "./diffViewState";
+  import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
+  import TsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
+  import JsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
+  import CssWorker from "monaco-editor/esm/vs/language/css/css.worker?worker";
+  import HtmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
+  import { getFileChangeFiles } from "../DetailPanel/activeCommitChangesState";
+  import type { File } from "../DetailPanel/activeCommitChangesState";
 
   self.MonacoEnvironment = {
-    getWorker: function (workerId, label) {
-      const getWorkerModule = (moduleUrl: string, label: string) => {
-        return new Worker(
-          self.MonacoEnvironment!.getWorkerUrl!(moduleUrl, label),
-          {
-            name: label,
-            type: "module",
-          }
-        );
-      };
-
-      switch (label) {
-        case "json":
-          return getWorkerModule(
-            "/monaco-editor/esm/vs/language/json/json.worker?worker",
-            label
-          );
-        case "css":
-        case "scss":
-        case "less":
-          return getWorkerModule(
-            "/monaco-editor/esm/vs/language/css/css.worker?worker",
-            label
-          );
-        case "html":
-        case "handlebars":
-        case "razor":
-          return getWorkerModule(
-            "/monaco-editor/esm/vs/language/html/html.worker?worker",
-            label
-          );
-        case "typescript":
-        case "javascript":
-          return getWorkerModule(
-            "/monaco-editor/esm/vs/language/typescript/ts.worker?worker",
-            label
-          );
-        default:
-          return getWorkerModule(
-            "/monaco-editor/esm/vs/editor/editor.worker?worker",
-            label
-          );
-      }
+    getWorker: function (_, label) {
+      if (label === "typescript" || label === "javascript")
+        return new TsWorker();
+      if (label === "json") return new JsonWorker();
+      if (label === "css") return new CssWorker();
+      if (label === "html") return new HtmlWorker();
+      return new EditorWorker();
     },
   };
 
@@ -61,24 +32,25 @@
       scrollBeyondLastLine: false,
       readOnly: true,
       domReadOnly: true,
+      automaticLayout: true,
     });
   });
 
   $: {
-    if ($diffDelta$ && editor) {
-      /**
-       * Svelte
-       * https://www.npmjs.com/package/monaco-editor-textmate
-       * https://www.npmjs.com/package/monaco-textmate
-       */
+    if ($diffDelta$ && editor && $selectedDelta$) {
+      const [old_file, new_file] = getFileChangeFiles($selectedDelta$.change);
+
+      monaco.editor.getModels().forEach((model) => model.dispose());
       editor.setModel({
         original: monaco.editor.createModel(
           $diffDelta$.old_file ?? "",
-          "svelte"
+          undefined,
+          getFileUri(old_file, "old")
         ),
         modified: monaco.editor.createModel(
           $diffDelta$.new_file ?? "",
-          "svelte"
+          undefined,
+          getFileUri(new_file, "new")
         ),
       });
       // https://github.com/microsoft/monaco-editor/issues/2707
@@ -95,12 +67,54 @@
       // );
     }
   }
+
+  function getFileUri(
+    file: File | null,
+    version: "new" | "old"
+  ): monaco.Uri | undefined {
+    if (!file) return undefined;
+
+    const res = monaco.Uri.file(file.path).with({
+      query: version,
+    });
+    console.log(res);
+    return res;
+  }
 </script>
 
-<div class="diff-view" bind:this={container} />
+<div class="diff-view">
+  <div class="header">
+    <button
+      on:click={() =>
+        editor.updateOptions({
+          renderSideBySide: true,
+        })}>Split</button
+    >
+    <button
+      on:click={() =>
+        editor.updateOptions({
+          renderSideBySide: false,
+        })}>Unified</button
+    >
+    <button>File</button>
+    <button>Hunk</button>
+    <button on:click={() => setDiffDelta(null)}>Close</button>
+  </div>
+  <div class="monaco-container" bind:this={container} />
+</div>
 
 <style>
   .diff-view {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header {
+    text-align: right;
+  }
+
+  .monaco-container {
     flex: 1 1 auto;
   }
 
