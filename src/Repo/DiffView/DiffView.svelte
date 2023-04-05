@@ -72,8 +72,8 @@
       });
 
       // TODO split reactivity for hunks/file and the actual changes.
-      // (editor.getOriginalEditor() as any).setHiddenAreas([]);
-      // (editor.getModifiedEditor() as any).setHiddenAreas([]);
+      (editor.getOriginalEditor() as any).setHiddenAreas([]);
+      (editor.getModifiedEditor() as any).setHiddenAreas([]);
       if (hunksOrFile === "hunks") {
         const hunks = $diffDelta$.hunks;
         let previousLine = [1, 1];
@@ -82,12 +82,12 @@
         hunks.forEach((hunk) => {
           if (previousLine[0] < hunk.old_range[0]) {
             originalHiddenRanges.push(
-              new monaco.Range(previousLine[0], 1, hunk.old_range[0], 1)
+              new monaco.Range(previousLine[0], 1, hunk.old_range[0] - 1, 1)
             );
           }
           if (previousLine[1] < hunk.new_range[0]) {
             modifiedHiddenRanges.push(
-              new monaco.Range(previousLine[1], 1, hunk.new_range[0], 1)
+              new monaco.Range(previousLine[1], 1, hunk.new_range[0] - 1, 1)
             );
           }
           previousLine = [
@@ -95,49 +95,59 @@
             hunk.new_range[0] + hunk.new_range[1],
           ];
         });
-        const originalLines = editor
-          .getOriginalEditor()
-          .getModel()!
-          .getLineCount();
-        const modifiedLines = editor
-          .getModifiedEditor()
-          .getModel()!
-          .getLineCount();
-        originalHiddenRanges.push(
-          new monaco.Range(previousLine[0], 1, originalLines, 1)
-        );
-        modifiedHiddenRanges.push(
-          new monaco.Range(previousLine[1], 1, modifiedLines, 1)
-        );
-        (editor.getOriginalEditor() as any).setHiddenAreas(
-          originalHiddenRanges
-        );
-        (editor.getModifiedEditor() as any).setHiddenAreas(
-          modifiedHiddenRanges
-        );
+        // const originalLines = editor
+        //   .getOriginalEditor()
+        //   .getModel()!
+        //   .getLineCount();
+        // const modifiedLines = editor
+        //   .getModifiedEditor()
+        //   .getModel()!
+        //   .getLineCount();
+        // originalHiddenRanges.push(
+        //   new monaco.Range(previousLine[0], 1, originalLines, 1)
+        // );
+        // modifiedHiddenRanges.push(
+        //   new monaco.Range(previousLine[1], 1, modifiedLines, 1)
+        // );
 
         editor.getOriginalEditor().changeViewZones((accesor) => {
           hunks.forEach((hunk, i) => {
             const div = document.createElement("div");
             div.innerHTML = hunk.header;
-            accesor.addZone({
-              afterLineNumber: i === 0 ? 0 : hunks[i].old_range[0],
+            const zone: monaco.editor.IViewZone = {
+              afterLineNumber: i === 0 ? 0 : hunks[i].old_range[0] - 1,
               heightInLines: 2,
               domNode: div,
-            });
+              afterColumn: 1e4,
+            };
+            console.log("original", i, zone);
+            accesor.addZone(zone);
           });
         });
         editor.getModifiedEditor().changeViewZones((accesor) => {
           hunks.forEach((hunk, i) => {
             const div = document.createElement("div");
             div.innerHTML = hunk.header;
-            accesor.addZone({
-              afterLineNumber: i === 0 ? 0 : hunks[i].new_range[0],
+            const zone: monaco.editor.IViewZone = {
+              afterLineNumber: i === 0 ? 0 : hunks[i].new_range[0] - 1,
               heightInLines: 2,
               domNode: div,
-            });
+              afterColumn: 1e4,
+            };
+            console.log("modified", i, zone);
+            accesor.addZone(zone);
           });
         });
+
+        (window as any).triggerChange = () => {
+          console.log(originalHiddenRanges, modifiedHiddenRanges);
+          (editor.getOriginalEditor() as any).setHiddenAreas(
+            originalHiddenRanges
+          );
+          (editor.getModifiedEditor() as any).setHiddenAreas(
+            modifiedHiddenRanges
+          );
+        };
       }
     }
   }

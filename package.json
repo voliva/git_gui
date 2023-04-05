@@ -12,7 +12,8 @@
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "tauri": "tauri",
     "test-ui": "vitest",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "postinstall": "patch-package"
   },
   "license": "MIT",
   "devDependencies": {

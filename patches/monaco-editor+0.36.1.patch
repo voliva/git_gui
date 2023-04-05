@@ -17,3 +17,20 @@ index 2697e80..5c532f1 100644
          const targetIsWidget = this.mouseTargetFactory.mouseTargetIsWidget(e);
          if (!targetIsWidget) {
              e.preventDefault();
+diff --git a/node_modules/monaco-editor/esm/vs/editor/browser/widget/diffEditorWidget.js b/node_modules/monaco-editor/esm/vs/editor/browser/widget/diffEditorWidget.js
+index ff2fcb0..b88228d 100644
+--- a/node_modules/monaco-editor/esm/vs/editor/browser/widget/diffEditorWidget.js
++++ b/node_modules/monaco-editor/esm/vs/editor/browser/widget/diffEditorWidget.js
+@@ -896,8 +896,10 @@ let DiffEditorWidget = class DiffEditorWidget extends Disposable {
+             return;
+         }
+         const lineChanges = (this._diffComputationResult ? this._diffComputationResult.changes : []);
+-        const foreignOriginal = this._originalEditorState.getForeignViewZones(this._originalEditor.getWhitespaces());
+-        const foreignModified = this._modifiedEditorState.getForeignViewZones(this._modifiedEditor.getWhitespaces());
++        // this grabbed the values from whiteSpaces in browser/viewParts/viewZones, which change line number when hidding lines
++        // so the problem was that this would add viewzones in the wrong place.
++        const foreignOriginal = [];
++        const foreignModified = [];
+         const renderMarginRevertIcon = this._options.renderMarginRevertIcon && !this._modifiedEditor.getOption(86 /* EditorOption.readOnly */);
+         const diffDecorations = this._strategy.getEditorsDiffDecorations(lineChanges, this._options.ignoreTrimWhitespace, this._options.renderIndicators, renderMarginRevertIcon, foreignOriginal, foreignModified);
+         try {
