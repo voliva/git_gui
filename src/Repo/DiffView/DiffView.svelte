@@ -1,14 +1,19 @@
 <script lang="ts">
   import * as monaco from "monaco-editor";
-  import { onMount } from "svelte";
-  import { diffDelta$, selectedDelta$, setDiffDelta } from "./diffViewState";
   import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
-  import TsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
-  import JsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
   import CssWorker from "monaco-editor/esm/vs/language/css/css.worker?worker";
   import HtmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
-  import { getFileChangeFiles } from "../DetailPanel/activeCommitChangesState";
+  import JsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
+  import TsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
+  import { onDestroy, onMount } from "svelte";
   import type { File } from "../DetailPanel/activeCommitChangesState";
+  import { getFileChangeFiles } from "../DetailPanel/activeCommitChangesState";
+  import {
+    getHiddenRanges,
+    setHiddenAreas,
+    viewZoneSetter,
+  } from "./diffViewHunks";
+  import { diffDelta$, selectedDelta$, setDiffDelta } from "./diffViewState";
 
   self.MonacoEnvironment = {
     getWorker: function (_, label) {
@@ -50,11 +55,9 @@
     });
   });
 
-  let hunksOrFile: "hunks" | "file" = "hunks";
+  let hunksOrFile: "hunks" | "file" = "file";
   $: {
     if ($diffDelta$ && editor && $selectedDelta$) {
-      console.log("recompute");
-
       const [old_file, new_file] = getFileChangeFiles($selectedDelta$.change);
 
       monaco.editor.getModels().forEach((model) => model.dispose());
@@ -70,84 +73,55 @@
           getFileUri(new_file, "new")
         ),
       });
+    }
+  }
 
-      // TODO split reactivity for hunks/file and the actual changes.
-      (editor.getOriginalEditor() as any).setHiddenAreas([]);
-      (editor.getModifiedEditor() as any).setHiddenAreas([]);
+  let cleanupPreviousViewzones = () => {};
+  onDestroy(cleanupPreviousViewzones);
+  $: {
+    if ($diffDelta$ && editor) {
+      const originalEditor = editor.getOriginalEditor();
+      const modifiedEditor = editor.getModifiedEditor();
+
       if (hunksOrFile === "hunks") {
         const hunks = $diffDelta$.hunks;
-        let previousLine = [1, 1];
-        const originalHiddenRanges: Array<monaco.Range> = [];
-        const modifiedHiddenRanges: Array<monaco.Range> = [];
-        hunks.forEach((hunk) => {
-          if (previousLine[0] < hunk.old_range[0]) {
-            originalHiddenRanges.push(
-              new monaco.Range(previousLine[0], 1, hunk.old_range[0] - 1, 1)
-            );
-          }
-          if (previousLine[1] < hunk.new_range[0]) {
-            modifiedHiddenRanges.push(
-              new monaco.Range(previousLine[1], 1, hunk.new_range[0] - 1, 1)
-            );
-          }
-          previousLine = [
-            hunk.old_range[0] + hunk.old_range[1],
-            hunk.new_range[0] + hunk.new_range[1],
-          ];
-        });
-        // const originalLines = editor
-        //   .getOriginalEditor()
-        //   .getModel()!
-        //   .getLineCount();
-        // const modifiedLines = editor
-        //   .getModifiedEditor()
-        //   .getModel()!
-        //   .getLineCount();
-        // originalHiddenRanges.push(
-        //   new monaco.Range(previousLine[0], 1, originalLines, 1)
-        // );
-        // modifiedHiddenRanges.push(
-        //   new monaco.Range(previousLine[1], 1, modifiedLines, 1)
-        // );
 
-        editor.getOriginalEditor().changeViewZones((accesor) => {
-          hunks.forEach((hunk, i) => {
-            const div = document.createElement("div");
-            div.innerHTML = hunk.header;
-            const zone: monaco.editor.IViewZone = {
-              afterLineNumber: i === 0 ? 0 : hunks[i].old_range[0] - 1,
-              heightInLines: 2,
-              domNode: div,
-              afterColumn: 1e4,
-            };
-            console.log("original", i, zone);
-            accesor.addZone(zone);
-          });
-        });
-        editor.getModifiedEditor().changeViewZones((accesor) => {
-          hunks.forEach((hunk, i) => {
-            const div = document.createElement("div");
-            div.innerHTML = hunk.header;
-            const zone: monaco.editor.IViewZone = {
-              afterLineNumber: i === 0 ? 0 : hunks[i].new_range[0] - 1,
-              heightInLines: 2,
-              domNode: div,
-              afterColumn: 1e4,
-            };
-            console.log("modified", i, zone);
-            accesor.addZone(zone);
-          });
-        });
+        const originalHiddenRanges = getHiddenRanges(
+          hunks.map((h) => h.old_range),
+          originalEditor.getModel()!.getLineCount()
+        );
+        const modifiedHiddenRanges = getHiddenRanges(
+          hunks.map((h) => h.new_range),
+          modifiedEditor.getModel()!.getLineCount()
+        );
 
-        (window as any).triggerChange = () => {
-          console.log(originalHiddenRanges, modifiedHiddenRanges);
-          (editor.getOriginalEditor() as any).setHiddenAreas(
-            originalHiddenRanges
-          );
-          (editor.getModifiedEditor() as any).setHiddenAreas(
-            modifiedHiddenRanges
-          );
+        setHiddenAreas(originalEditor, originalHiddenRanges);
+        setHiddenAreas(modifiedEditor, modifiedHiddenRanges);
+
+        cleanupPreviousViewzones();
+        const [originalVZ, cleanupOriginalVZ] = viewZoneSetter(
+          hunks.map((h) => ({
+            header: h.header,
+            range: h.old_range,
+          }))
+        );
+        const [modifiedVZ, cleanupModifiedVZ] = viewZoneSetter(
+          hunks.map((h) => ({
+            header: h.header,
+            range: h.new_range,
+          }))
+        );
+        originalEditor.changeViewZones(originalVZ);
+        modifiedEditor.changeViewZones(modifiedVZ);
+        cleanupPreviousViewzones = () => {
+          originalEditor.changeViewZones(cleanupOriginalVZ);
+          modifiedEditor.changeViewZones(cleanupModifiedVZ);
+          cleanupPreviousViewzones = () => {};
         };
+      } else {
+        setHiddenAreas(originalEditor, []);
+        setHiddenAreas(modifiedEditor, []);
+        cleanupPreviousViewzones();
       }
     }
   }
