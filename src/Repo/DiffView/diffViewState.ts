@@ -19,7 +19,6 @@ export interface Hunk {
   old_range: [number, number];
   new_range: [number, number];
   header: string;
-  changes: Array<Change>;
 }
 export interface DeltaDiff {
   old_file?: string;

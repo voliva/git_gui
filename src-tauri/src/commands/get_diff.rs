@@ -1,7 +1,5 @@
-use std::collections::HashMap;
-
 use crate::commands::serializer::delta::Delta;
-use git2::{DiffHunk, DiffLine, Oid, Repository};
+use git2::{DiffHunk, Oid, Repository};
 use logging_timer::time;
 use serde::Serialize;
 
@@ -19,7 +17,6 @@ pub struct Hunk {
     old_range: (u32, u32),
     new_range: (u32, u32),
     header: String,
-    changes: Vec<Change>,
 }
 
 impl<'a> From<DiffHunk<'a>> for Hunk {
@@ -28,47 +25,8 @@ impl<'a> From<DiffHunk<'a>> for Hunk {
             old_range: (hunk.old_start(), hunk.old_lines()),
             new_range: (hunk.new_start(), hunk.new_lines()),
             header: std::str::from_utf8(hunk.header()).unwrap().to_owned(),
-            changes: vec![],
         }
     }
-}
-
-#[derive(Serialize)]
-pub struct Change {
-    side: Side,
-    line_num: u32,
-    change_type: char,
-}
-
-impl<'a> TryFrom<DiffLine<'a>> for Change {
-    type Error = ();
-
-    fn try_from(line: DiffLine) -> Result<Self, Self::Error> {
-        let (side, line_num) = match (line.old_lineno(), line.new_lineno()) {
-            (Some(_), Some(_)) => {
-                if line.origin() == ' ' {
-                    return Err(());
-                }
-                panic!("line with double change")
-            }
-            (Some(line), None) => (Side::OldFile, line),
-            (None, Some(line)) => (Side::NewFile, line),
-            _ => {
-                panic!("line with no change")
-            }
-        };
-        Ok(Change {
-            side,
-            line_num,
-            change_type: line.origin(),
-        })
-    }
-}
-
-#[derive(Serialize)]
-pub enum Side {
-    OldFile,
-    NewFile,
 }
 
 #[time]
@@ -105,7 +63,6 @@ pub fn get_diff(path: String, delta: Delta) -> Result<DeltaDiff, GitError> {
     });
 
     let mut hunks = vec![];
-    let mut hunk_changes: HashMap<String, Vec<Change>> = HashMap::new();
 
     repo.diff_blobs(
         old_blob.as_ref(),
@@ -113,29 +70,14 @@ pub fn get_diff(path: String, delta: Delta) -> Result<DeltaDiff, GitError> {
         new_blob.as_ref(),
         None,
         None,
-        Some(&mut |_, _| true),
+        None,
         Some(&mut |_, _binary| todo!("Binary diff")),
         Some(&mut |_, hunk| {
             hunks.push(Hunk::from(hunk));
             true
         }),
-        Some(&mut |_, hunk, line| {
-            let hunk_name = std::str::from_utf8(hunk.unwrap().header())
-                .unwrap()
-                .to_owned();
-            if !hunk_changes.contains_key(&hunk_name) {
-                hunk_changes.insert(hunk_name.clone(), vec![]);
-            }
-            if let Ok(change) = Change::try_from(line) {
-                hunk_changes.get_mut(&hunk_name).unwrap().push(change);
-            }
-            true
-        }),
+        None,
     )?;
-
-    for hunk in &mut hunks {
-        hunk.changes = hunk_changes.remove(&hunk.header).unwrap_or(vec![]);
-    }
 
     Ok(DeltaDiff {
         old_file: old_content,

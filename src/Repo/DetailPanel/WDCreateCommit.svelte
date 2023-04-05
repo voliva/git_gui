@@ -40,6 +40,7 @@
 
   let commitBtnDisabled = true;
   $: {
+    // TODO buggy?
     const hasCommitMessage = commitMessage !== "";
     if (activeTab === CommitTab.New) {
       // TODO it's posible to make a commit without changes with merge commits

@@ -1,4 +1,6 @@
 import * as monaco from "monaco-editor";
+import { firstHunk, hunkHeaderContainer } from "./diffView.css";
+import { qs } from "@/quickStyles";
 
 export function getHiddenRanges(
   hunkRanges: Array<[number, number]>,
@@ -30,13 +32,27 @@ export function viewZoneSetter(
   const addedZones: Array<string> = [];
   const setter = (accessor: monaco.editor.IViewZoneChangeAccessor) => {
     hunks.forEach((hunk, i) => {
-      const div = document.createElement("div");
-      div.innerHTML = hunk.header;
+      const headerText = getHeader(hunk.header);
+      if (!headerText && i === 0) {
+        return;
+      }
+
+      const headerContainer = document.createElement("div");
+      headerContainer.classList.add(hunkHeaderContainer);
+      if (i === 0) {
+        headerContainer.classList.add(firstHunk);
+      }
+
+      const headerContent = document.createElement("div");
+      headerContent.classList.add(qs("textEllipsis"));
+      headerContent.textContent = headerText;
+      headerContainer.appendChild(headerContent);
+
       const zone: monaco.editor.IViewZone = {
-        afterLineNumber: i === 0 ? 0 : hunks[i].range[0] - 1,
-        heightInLines: 2,
-        domNode: div,
-        afterColumn: 1e4,
+        afterLineNumber: i === 0 ? 0 : hunk.range[0] - 1,
+        heightInLines: i === 0 ? 1 : 3,
+        domNode: headerContainer,
+        afterColumn: Number.MAX_SAFE_INTEGER,
       };
       addedZones.push(accessor.addZone(zone));
     });
@@ -56,3 +72,11 @@ export function setHiddenAreas(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (editor as any).setHiddenAreas(areas);
 }
+
+const getHeader = (raw: string) => {
+  const split = raw.split("@@");
+  if (split.length > 2) {
+    return split[2].trim();
+  }
+  return "";
+};
