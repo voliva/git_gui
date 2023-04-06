@@ -39,6 +39,7 @@
       domReadOnly: true,
       automaticLayout: true,
       showDeprecated: false,
+      showUnused: false,
       // In an attempt to hide all hints...
       inlayHints: { enabled: "off" },
       parameterHints: { enabled: false },

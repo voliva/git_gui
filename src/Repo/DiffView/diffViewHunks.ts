@@ -1,5 +1,9 @@
 import * as monaco from "monaco-editor";
-import { firstHunk, hunkHeaderContainer } from "./diffView.css";
+import {
+  firstHunk,
+  hunkHeaderContainer,
+  hunkHeaderContent,
+} from "./diffView.css";
 import { qs } from "@/quickStyles";
 
 export function getHiddenRanges(
@@ -44,13 +48,15 @@ export function viewZoneSetter(
       }
 
       const headerContent = document.createElement("div");
-      headerContent.classList.add(qs("textEllipsis"));
-      headerContent.textContent = headerText;
+      headerContent.classList.add(qs("textEllipsis"), hunkHeaderContent);
       headerContainer.appendChild(headerContent);
+      if (headerText) {
+        headerContent.textContent = "@ " + headerText;
+      }
 
       const zone: monaco.editor.IViewZone = {
         afterLineNumber: i === 0 ? 0 : hunk.range[0] - 1,
-        heightInLines: i === 0 ? 1 : 3,
+        heightInLines: 3,
         domNode: headerContainer,
         afterColumn: Number.MAX_SAFE_INTEGER,
       };
