@@ -1,5 +1,6 @@
 mod checkout;
 mod commit;
+mod diff_settings;
 mod fetch;
 mod get_commit;
 mod get_commits;
@@ -14,6 +15,7 @@ mod watch_repo;
 
 pub use checkout::*;
 pub use commit::*;
+pub use diff_settings::*;
 pub use fetch::*;
 pub use get_commit::*;
 pub use get_commits::*;

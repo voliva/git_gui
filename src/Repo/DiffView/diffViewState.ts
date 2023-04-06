@@ -1,7 +1,15 @@
 import { state } from "@react-rxjs/core";
-import { createSignal } from "@react-rxjs/utils";
+import { createSignal, mergeWithKey } from "@react-rxjs/utils";
 import { invoke } from "@tauri-apps/api";
-import { from, startWith, switchMap, withLatestFrom } from "rxjs";
+import {
+  Observable,
+  from,
+  scan,
+  startWith,
+  switchMap,
+  tap,
+  withLatestFrom,
+} from "rxjs";
 import type { Delta } from "../DetailPanel/activeCommitChangesState";
 import { repoPath$ } from "../repoState";
 
@@ -25,6 +33,39 @@ export interface DeltaDiff {
   new_file?: string;
   hunks: Array<Hunk>;
 }
+
+interface DiffSettings {
+  hunk_or_file: "Hunk" | "File";
+  split_or_unified: "Split" | "Unified";
+}
+export const [changeHunkOrFile$, changeHunkOrFile] =
+  createSignal<DiffSettings["hunk_or_file"]>();
+export const [changeSplitOrUnified$, changeSplitOrUnified] =
+  createSignal<DiffSettings["split_or_unified"]>();
+export const diffViewSettings$ = state(
+  from(invoke<DiffSettings | null>("get_diff_settings")).pipe(
+    switchMap((initialValue): Observable<DiffSettings> => {
+      initialValue = initialValue ?? {
+        hunk_or_file: "Hunk",
+        split_or_unified: "Split",
+      };
+
+      return mergeWithKey({
+        hunk_or_file: changeHunkOrFile$,
+        split_or_unified: changeSplitOrUnified$,
+      }).pipe(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        scan((acc: any, v) => {
+          acc[v.type] = v.payload;
+          return acc;
+        }, initialValue),
+        tap((settings) => invoke("set_diff_settings", { settings })),
+        startWith(initialValue)
+      );
+    })
+  )
+);
+diffViewSettings$.subscribe((v) => console.log(v));
 
 export const [diffDeltaChange$, setDiffDelta] = createSignal<Delta | null>();
 export const selectedDelta$ = state(diffDeltaChange$, null);

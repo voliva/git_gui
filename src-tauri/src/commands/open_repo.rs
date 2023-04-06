@@ -1,4 +1,4 @@
-use crate::settings::set_settings_opened_repo;
+use crate::settings::{OpenRepo, StringSettings};
 use git2::Repository;
 use logging_timer::time;
 use serde::Serialize;
@@ -34,7 +34,7 @@ pub fn open_repo(app: tauri::AppHandle) -> Result<String, OpenRepoError> {
         };
 
         Repository::open(path.clone())?;
-        set_settings_opened_repo(&app, &path);
+        OpenRepo::save(&app, &path);
 
         return Ok(path);
     } else {

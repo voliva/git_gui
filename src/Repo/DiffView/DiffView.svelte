@@ -13,7 +13,14 @@
     setHiddenAreas,
     viewZoneSetter,
   } from "./diffViewHunks";
-  import { diffDelta$, selectedDelta$, setDiffDelta } from "./diffViewState";
+  import {
+    changeHunkOrFile,
+    changeSplitOrUnified,
+    diffDelta$,
+    diffViewSettings$,
+    selectedDelta$,
+    setDiffDelta,
+  } from "./diffViewState";
 
   self.MonacoEnvironment = {
     getWorker: function (_, label) {
@@ -56,7 +63,12 @@
     });
   });
 
-  let hunksOrFile: "hunks" | "file" = "file";
+  let settings = $diffViewSettings$;
+  $: {
+    editor?.updateOptions({
+      renderSideBySide: settings?.split_or_unified === "Split",
+    });
+  }
   $: {
     if ($diffDelta$ && editor && $selectedDelta$) {
       const [old_file, new_file] = getFileChangeFiles($selectedDelta$.change);
@@ -84,7 +96,7 @@
       const originalEditor = editor.getOriginalEditor();
       const modifiedEditor = editor.getModifiedEditor();
 
-      if (hunksOrFile === "hunks") {
+      if (settings.hunk_or_file === "Hunk") {
         const hunks = $diffDelta$.hunks;
 
         const originalHiddenRanges = getHiddenRanges(
@@ -142,20 +154,10 @@
 
 <div class="diff-view">
   <div class="header">
-    <button
-      on:click={() =>
-        editor.updateOptions({
-          renderSideBySide: true,
-        })}>Split</button
-    >
-    <button
-      on:click={() =>
-        editor.updateOptions({
-          renderSideBySide: false,
-        })}>Unified</button
-    >
-    <button on:click={() => (hunksOrFile = "file")}>File</button>
-    <button on:click={() => (hunksOrFile = "hunks")}>Hunk</button>
+    <button on:click={() => changeSplitOrUnified("Split")}>Split</button>
+    <button on:click={() => changeSplitOrUnified("Unified")}>Unified</button>
+    <button on:click={() => changeHunkOrFile("File")}>File</button>
+    <button on:click={() => changeHunkOrFile("Hunk")}>Hunk</button>
     <button on:click={() => setDiffDelta(null)}>Close</button>
   </div>
   <div class="monaco-container" bind:this={container} />

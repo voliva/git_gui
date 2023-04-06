@@ -9,8 +9,8 @@ mod settings;
 
 use crate::commands::{
     checkout_commit, checkout_local, checkout_remote, commit, fetch, get_commit, get_commits,
-    get_diff, get_last_repo, get_refs, get_working_dir, open_repo, stage, stop_watch_repo, unstage,
-    watch_repo,
+    get_diff, get_diff_settings, get_last_repo, get_refs, get_working_dir, open_repo,
+    set_diff_settings, stage, stop_watch_repo, unstage, watch_repo,
 };
 use env_logger::Env;
 use notify::RecommendedWatcher;
@@ -38,6 +38,8 @@ fn main() {
             get_last_repo,
             get_refs,
             get_working_dir,
+            get_diff_settings,
+            set_diff_settings,
             open_repo,
             stage,
             stop_watch_repo,
