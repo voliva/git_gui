@@ -36,15 +36,13 @@
   let hasStagedChanges$ = workingDirectory$.pipe(
     map(({ staged_deltas }) => staged_deltas.length > 0)
   );
-  let hasStagedChanges = $hasStagedChanges$;
 
   let commitBtnDisabled = true;
   $: {
-    // TODO buggy?
     const hasCommitMessage = commitMessage !== "";
     if (activeTab === CommitTab.New) {
       // TODO it's posible to make a commit without changes with merge commits
-      commitBtnDisabled = !hasCommitMessage || !hasStagedChanges;
+      commitBtnDisabled = !hasCommitMessage || !$hasStagedChanges$;
     } else {
       commitBtnDisabled = !hasCommitMessage;
     }

@@ -3,6 +3,7 @@ import { createSignal, mergeWithKey } from "@react-rxjs/utils";
 import { invoke } from "@tauri-apps/api";
 import {
   Observable,
+  distinctUntilChanged,
   from,
   scan,
   startWith,
@@ -65,10 +66,12 @@ export const diffViewSettings$ = state(
     })
   )
 );
-diffViewSettings$.subscribe((v) => console.log(v));
 
 export const [diffDeltaChange$, setDiffDelta] = createSignal<Delta | null>();
-export const selectedDelta$ = state(diffDeltaChange$, null);
+export const selectedDelta$ = state(
+  diffDeltaChange$.pipe(distinctUntilChanged()),
+  null
+);
 export const diffDelta$ = selectedDelta$.pipeState(
   withLatestFrom(repoPath$),
   switchMap(([delta, path]) => {

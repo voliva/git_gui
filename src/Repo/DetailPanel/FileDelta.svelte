@@ -22,6 +22,8 @@
   import RiDocumentFileTransferLine from "svelte-icons-pack/ri/RiDocumentFileTransferLine";
   import Icon from "svelte-icons-pack";
   import { createEventDispatcher } from "svelte";
+  import classNames from "classnames";
+  import { selectedDelta$ } from "../DiffView/diffViewState";
 
   export let delta: Delta;
   const dispatch = createEventDispatcher();
@@ -63,7 +65,9 @@
 </script>
 
 <li
-  class={classes.changeLine}
+  class={classNames(classes.changeLine, {
+    active: $selectedDelta$ === delta,
+  })}
   use:tippy={{
     placement: "left",
     content: file.path,

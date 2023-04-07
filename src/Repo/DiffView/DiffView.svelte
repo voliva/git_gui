@@ -21,6 +21,8 @@
     selectedDelta$,
     setDiffDelta,
   } from "./diffViewState";
+  import ButtonGroup from "@/components/ButtonGroup.svelte";
+  import classNames from "classnames";
 
   self.MonacoEnvironment = {
     getWorker: function (_, label) {
@@ -63,10 +65,9 @@
     });
   });
 
-  let settings = $diffViewSettings$;
   $: {
     editor?.updateOptions({
-      renderSideBySide: settings?.split_or_unified === "Split",
+      renderSideBySide: $diffViewSettings$?.split_or_unified === "Split",
     });
   }
   $: {
@@ -96,7 +97,7 @@
       const originalEditor = editor.getOriginalEditor();
       const modifiedEditor = editor.getModifiedEditor();
 
-      if (settings.hunk_or_file === "Hunk") {
+      if ($diffViewSettings$.hunk_or_file === "Hunk") {
         const hunks = $diffDelta$.hunks;
 
         const originalHiddenRanges = getHiddenRanges(
@@ -154,10 +155,34 @@
 
 <div class="diff-view">
   <div class="header">
-    <button on:click={() => changeSplitOrUnified("Split")}>Split</button>
-    <button on:click={() => changeSplitOrUnified("Unified")}>Unified</button>
-    <button on:click={() => changeHunkOrFile("File")}>File</button>
-    <button on:click={() => changeHunkOrFile("Hunk")}>Hunk</button>
+    <ButtonGroup>
+      <button
+        class={classNames({
+          active: $diffViewSettings$?.split_or_unified == "Split",
+        })}
+        on:click={() => changeSplitOrUnified("Split")}>Split</button
+      >
+      <button
+        class={classNames({
+          active: $diffViewSettings$?.split_or_unified == "Unified",
+        })}
+        on:click={() => changeSplitOrUnified("Unified")}>Unified</button
+      >
+    </ButtonGroup>
+    <ButtonGroup>
+      <button
+        class={classNames({
+          active: $diffViewSettings$?.hunk_or_file == "File",
+        })}
+        on:click={() => changeHunkOrFile("File")}>File</button
+      >
+      <button
+        class={classNames({
+          active: $diffViewSettings$?.hunk_or_file == "Hunk",
+        })}
+        on:click={() => changeHunkOrFile("Hunk")}>Hunk</button
+      >
+    </ButtonGroup>
     <button on:click={() => setDiffDelta(null)}>Close</button>
   </div>
   <div class="monaco-container" bind:this={container} />
