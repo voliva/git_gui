@@ -1,9 +1,13 @@
 use crate::commands::serializer::delta::Delta;
-use git2::{DiffHunk, Oid, Repository};
+use git2::{DiffHunk, DiffOptions, Oid, Repository};
+use itertools::Itertools;
 use logging_timer::time;
 use serde::Serialize;
 
 use super::serializer::{delta::FileChange, git_error::GitError};
+use flate2::read::ZlibDecoder;
+use mime_sniffer::MimeTypeSniffer;
+use std::io::Read;
 
 #[derive(Serialize)]
 pub struct DeltaDiff {
@@ -64,14 +68,34 @@ pub fn get_diff(path: String, delta: Delta) -> Result<DeltaDiff, GitError> {
 
     let mut hunks = vec![];
 
+    let mut options = DiffOptions::default();
+    options.show_binary(true);
+
     repo.diff_blobs(
         old_blob.as_ref(),
         None,
         new_blob.as_ref(),
         None,
+        Some(&mut options),
         None,
-        None,
-        Some(&mut |_, _binary| todo!("Binary diff")),
+        Some(&mut |_, binary| {
+            let file = binary.new_file();
+            let mut decoder = ZlibDecoder::new(&file.data()[..]);
+            let mut inflated_data = Vec::new();
+
+            // Read the inflated data into a buffer
+            decoder.read_to_end(&mut inflated_data).unwrap();
+            println!(
+                "{:?}",
+                &inflated_data[..20]
+                    .iter()
+                    .map(|x| (format!("{:#x}", x), char::from_u32(*x as u32).unwrap()))
+                    .collect_vec()
+            );
+
+            println!("mime type: {:?}", inflated_data.sniff_mime_type());
+            todo!("Binary diff");
+        }),
         Some(&mut |_, hunk| {
             hunks.push(Hunk::from(hunk));
             true
