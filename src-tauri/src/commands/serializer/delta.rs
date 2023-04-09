@@ -1,3 +1,4 @@
+use rocket::http::ContentType;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Debug)]
@@ -5,7 +6,7 @@ pub enum DeltaReadError {
     UnsupportedDeltaType,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct File {
     pub id: String,
     pub path: String,
@@ -34,10 +35,25 @@ pub enum FileChange {
     Modified(File, File),
 }
 
+impl FileChange {
+    fn get_newest_file(&self) -> File {
+        let file = match self {
+            FileChange::Added(f) => f,
+            FileChange::Untracked(f) => f,
+            FileChange::Copied(_, f) => f,
+            FileChange::Deleted(f) => f,
+            FileChange::Renamed(_, f) => f,
+            FileChange::Modified(_, f) => f,
+        };
+        file.clone()
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct Delta {
     pub change: FileChange,
     binary: bool,
+    mime_type: Option<String>,
 }
 
 impl<'a> TryFrom<git2::DiffDelta<'a>> for Delta {
@@ -63,10 +79,24 @@ impl<'a> TryFrom<git2::DiffDelta<'a>> for Delta {
                 return Err(DeltaReadError::UnsupportedDeltaType);
             }
         };
+        let binary = value.flags().is_binary();
+
+        let path = change.get_newest_file().path;
+        let last_point = path.len() - path.chars().rev().take_while(|x| x != &'.').count();
+        let extension = if last_point > 0 {
+            Some(&path[last_point..])
+        } else {
+            None
+        };
+        let mime_type = extension
+            .and_then(|ext| ContentType::from_extension(ext))
+            .map(|content_type| content_type.to_string());
+        println!("Extension {:?} mime_type {:?}", extension, mime_type);
 
         Ok(Delta {
             change,
-            binary: value.flags().is_binary(),
+            binary,
+            mime_type,
         })
     }
 }

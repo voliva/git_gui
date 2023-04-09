@@ -8,7 +8,7 @@
   import RepoGrid from "./RepoGrid/RepoGrid.svelte";
   import RepoHeader from "./RepoHeader.svelte";
   import { commits$ } from "./repoState";
-  import BinaryDiffView from "./DiffView/BinaryDiffView.svelte";
+  import ImageDiffView from "./DiffView/ImageDiffView.svelte";
 
   let sub: Subscription;
   onMount(() => {
@@ -24,7 +24,7 @@
 
   <div class={qs("boxFill", "horizontalFlex", "noOverflow")}>
     {#if $selectedDelta$?.binary}
-      <BinaryDiffView />
+      <ImageDiffView />
     {:else if $selectedDelta$}
       <DiffView />
     {:else}

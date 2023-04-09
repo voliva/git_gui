@@ -1058,7 +1058,6 @@ version = "0.0.0"
 dependencies = [
  "derivative",
  "env_logger",
- "flate2",
  "git2",
  "itertools",
  "logging_timer",

@@ -95,7 +95,7 @@ port$.subscribe();
 export const deltaPaths$ = selectedDelta$.pipeState(
   withLatestFrom(repoPath$, port$),
   map(([delta, path, port]) => {
-    if (!delta?.binary) {
+    if (!delta?.mime_type?.startsWith("image")) {
       return null;
     }
     const [old_file, new_file] = getFileChangeFiles(delta.change);

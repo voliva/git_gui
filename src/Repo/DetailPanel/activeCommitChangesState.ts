@@ -19,6 +19,7 @@ export type FileChange =
 export interface Delta {
   change: FileChange;
   binary: boolean;
+  mime_type?: string;
 }
 
 export interface CommitContents {

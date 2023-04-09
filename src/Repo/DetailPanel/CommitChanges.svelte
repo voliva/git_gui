@@ -12,7 +12,14 @@
     <div class={qs("boxFill", "overflowVertical")}>
       <ul>
         {#each $commitChanges$.deltas as delta}
-          <FileDelta {delta} on:click={() => setDiffDelta(delta)} />
+          <FileDelta
+            {delta}
+            on:click={() => {
+              if (!delta.binary || delta.mime_type?.startsWith("image")) {
+                setDiffDelta(delta);
+              }
+            }}
+          />
         {/each}
       </ul>
     </div>
