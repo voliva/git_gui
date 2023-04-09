@@ -26,6 +26,9 @@ logging_timer = "1.1.0"
 env_logger = "0.10.0"
 mime-sniffer = "0.1.2"
 flate2 = "1.0.25"
+port_check = "0.1.5"
+rocket = "=0.5.0-rc.3"
+rocket_cors = "0.5.2"
 
 [features]
 # by default Tauri runs in production mode

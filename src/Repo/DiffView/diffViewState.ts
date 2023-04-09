@@ -11,7 +11,10 @@ import {
   tap,
   withLatestFrom,
 } from "rxjs";
-import type { Delta } from "../DetailPanel/activeCommitChangesState";
+import {
+  getFileChangeFiles,
+  type Delta,
+} from "../DetailPanel/activeCommitChangesState";
 import { repoPath$ } from "../repoState";
 
 export enum Side {
@@ -72,10 +75,18 @@ export const selectedDelta$ = state(
   diffDeltaChange$.pipe(distinctUntilChanged()),
   null
 );
+const port$ = state(from(invoke<number>("get_port")));
+port$.subscribe();
+
 export const diffDelta$ = selectedDelta$.pipeState(
-  withLatestFrom(repoPath$),
-  switchMap(([delta, path]) => {
+  withLatestFrom(repoPath$, port$),
+  switchMap(([delta, path, port]) => {
     if (!delta) {
+      return [null];
+    }
+    const [o, n] = getFileChangeFiles(delta.change);
+    fetch(`http://localhost:${port}/raw/${o?.path}/${o?.id}`);
+    if (delta.binary) {
       return [null];
     }
     return from(invoke<DeltaDiff>("get_diff", { path, delta })).pipe(
