@@ -5,6 +5,7 @@ import {
   Observable,
   distinctUntilChanged,
   from,
+  map,
   scan,
   startWith,
   switchMap,
@@ -75,22 +76,35 @@ export const selectedDelta$ = state(
   diffDeltaChange$.pipe(distinctUntilChanged()),
   null
 );
-const port$ = state(from(invoke<number>("get_port")));
-port$.subscribe();
 
 export const diffDelta$ = selectedDelta$.pipeState(
-  withLatestFrom(repoPath$, port$),
-  switchMap(([delta, path, port]) => {
-    if (!delta) {
-      return [null];
-    }
-    const [o, n] = getFileChangeFiles(delta.change);
-    fetch(`http://localhost:${port}/raw/${o?.path}/${o?.id}`);
-    if (delta.binary) {
+  withLatestFrom(repoPath$),
+  switchMap(([delta, path]) => {
+    if (!delta || delta.binary) {
       return [null];
     }
     return from(invoke<DeltaDiff>("get_diff", { path, delta })).pipe(
       startWith(null)
     );
+  })
+);
+
+const port$ = state(from(invoke<number>("get_port")));
+port$.subscribe();
+
+export const deltaPaths$ = selectedDelta$.pipeState(
+  withLatestFrom(repoPath$, port$),
+  map(([delta, path, port]) => {
+    if (!delta?.binary) {
+      return null;
+    }
+    const [old_file, new_file] = getFileChangeFiles(delta.change);
+    const prefix = `http://localhost:${port}/raw/${encodeURIComponent(
+      path ?? ""
+    )}`;
+    return {
+      old: old_file && `${prefix}/${old_file.id}`,
+      new: new_file && `${prefix}/${new_file.id}`,
+    };
   })
 );

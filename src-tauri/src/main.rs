@@ -14,10 +14,13 @@ use crate::commands::{
 };
 use env_logger::Env;
 use logging_timer::time;
+use mime_sniffer::MimeTypeSniffer;
 use notify::RecommendedWatcher;
 use port_check::free_local_port;
+use std::str::FromStr;
 use std::{sync::Mutex, thread};
 use tauri::{CustomMenuItem, Manager, Menu, State, Submenu};
+
 extern crate rocket;
 
 #[derive(Default)]
@@ -26,12 +29,44 @@ pub struct AppState {
     port: u16,
 }
 
+use rocket::fairing::{Fairing, Info, Kind};
+use rocket::http::{ContentType, Header};
+use rocket::{Request, Response};
+
+pub struct CORS;
+
+#[rocket::async_trait]
+impl Fairing for CORS {
+    fn info(&self) -> Info {
+        Info {
+            name: "Add CORS headers to responses",
+            kind: Kind::Response,
+        }
+    }
+
+    async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
+        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+        response.set_header(Header::new(
+            "Access-Control-Allow-Methods",
+            "POST, GET, PATCH, OPTIONS",
+        ));
+        response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+    }
+}
+
 #[rocket::get("/raw/<path>/<id>")]
-fn get_raw_file(path: &str, id: &str) -> Vec<u8> {
+fn get_raw_file(path: &str, id: &str) -> (rocket::http::ContentType, Vec<u8>) {
     let repo = git2::Repository::open(path).unwrap();
     let blob = repo.find_blob(git2::Oid::from_str(id).unwrap()).unwrap();
+    let content = blob.content();
 
-    blob.content().into()
+    let content_type = content
+        .sniff_mime_type()
+        .and_then(|mime_type| rocket::http::ContentType::from_str(mime_type).ok())
+        .unwrap_or(ContentType::Any);
+
+    (content_type, content.into())
 }
 
 fn main() {
@@ -91,20 +126,11 @@ fn main() {
             let mut config = rocket::config::Config::default();
             config.port = port.clone();
 
-            let cors = CorsOptions::default()
-                .allowed_origins(AllowedOrigins::all())
-                .allowed_methods(
-                    vec![Method::Get, Method::Post, Method::Patch]
-                        .into_iter()
-                        .map(From::from)
-                        .collect(),
-                )
-                .allow_credentials(true);
-
             tauri::async_runtime::spawn(
                 rocket::build()
                     .configure(config)
                     .mount("/", rocket::routes![get_raw_file])
+                    .attach(CORS)
                     .launch(),
             );
             Ok(())
