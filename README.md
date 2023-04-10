@@ -8,9 +8,10 @@ The main goal is for it to be lightweight and fast, while still being visually a
 
 ## Status
 
-Currently in small development as a side project. At the moment of writing this, it only can git fetch, list commits, render them and create new commits, but it doesn't show the diff of changes yet.
+Currently in small development as a side project. At the moment of writing this, it only can git fetch, list and create commits, and show the diff of source files and images.
 
 ![commit list](https://github.com/voliva/git_gui/blob/main/readme_img/commit_list.png?raw=true)
+![diff view](https://github.com/voliva/git_gui/blob/main/readme_img/diff_view.png?raw=true)
 
 It ain't much, but it's honest work
 
