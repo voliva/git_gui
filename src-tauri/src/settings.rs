@@ -24,9 +24,17 @@ pub enum SplitOrUnified {
 }
 
 #[derive(Serialize, Deserialize)]
+pub enum ImageMode {
+    SideBySide,
+    Slide,
+    Opacity,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct DiffSettings {
     hunk_or_file: HunkOrFile,
     split_or_unified: SplitOrUnified,
+    image_mode: ImageMode,
 }
 impl JsonSettings for DiffSettings {
     fn get_filename() -> &'static str {

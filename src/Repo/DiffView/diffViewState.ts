@@ -7,6 +7,7 @@ import {
   from,
   map,
   scan,
+  shareReplay,
   startWith,
   switchMap,
   tap,
@@ -42,22 +43,27 @@ export interface DeltaDiff {
 interface DiffSettings {
   hunk_or_file: "Hunk" | "File";
   split_or_unified: "Split" | "Unified";
+  image_mode: "SideBySide" | "Slide" | "Opacity";
 }
 export const [changeHunkOrFile$, changeHunkOrFile] =
   createSignal<DiffSettings["hunk_or_file"]>();
 export const [changeSplitOrUnified$, changeSplitOrUnified] =
   createSignal<DiffSettings["split_or_unified"]>();
+export const [changeImageDiffMode$, changeImageDiffMode] =
+  createSignal<DiffSettings["image_mode"]>();
 export const diffViewSettings$ = state(
   from(invoke<DiffSettings | null>("get_diff_settings")).pipe(
     switchMap((initialValue): Observable<DiffSettings> => {
       initialValue = initialValue ?? {
         hunk_or_file: "Hunk",
         split_or_unified: "Split",
+        image_mode: "Slide",
       };
 
       return mergeWithKey({
         hunk_or_file: changeHunkOrFile$,
         split_or_unified: changeSplitOrUnified$,
+        image_mode: changeImageDiffMode$,
       }).pipe(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         scan((acc: any, v) => {
@@ -89,11 +95,15 @@ export const diffDelta$ = selectedDelta$.pipeState(
   })
 );
 
-const port$ = state(from(invoke<number>("get_port")));
-port$.subscribe();
+const port$ = from(invoke<number>("get_port")).pipe(shareReplay(1));
 
 export const deltaPaths$ = selectedDelta$.pipeState(
-  withLatestFrom(repoPath$, port$),
+  withLatestFrom(repoPath$),
+  switchMap((values) =>
+    port$.pipe(
+      map((port): [Delta | null, string | null, number] => [...values, port])
+    )
+  ),
   map(([delta, path, port]) => {
     if (!delta?.mime_type?.startsWith("image")) {
       return null;

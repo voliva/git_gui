@@ -1,188 +1,66 @@
 <script lang="ts">
-  import { deltaPaths$ } from "./diffViewState";
+  import ButtonGroup from "@/components/ButtonGroup.svelte";
+  import ImageOverlayDiff from "./ImageOverlayDiff.svelte";
+  import {
+    changeImageDiffMode,
+    deltaPaths$,
+    diffViewSettings$,
+    setDiffDelta,
+  } from "./diffViewState";
+  import classNames from "classnames";
+  import ImageSideBySide from "./ImageSideBySide.svelte";
+  import ImageDiffOpacity from "./ImageDiffOpacity.svelte";
 
-  let container: HTMLDivElement;
-
-  // TODO add it or not? let image take the whole width, because with this it doesn't
-  // const IMAGE_ORIGINAL_SCALE = 1 / window.devicePixelRatio;
-  const MIN_SCALE = 1;
-
-  let scale = MIN_SCALE;
-  let translate = [0, 0];
-  let maskSize = 3 / 4;
-
-  $: matrix = new DOMMatrix()
-    .translate(translate[0], translate[1])
-    .scale(scale);
-
-  function handleWheel(evt: WheelEvent) {
-    evt.preventDefault();
-
-    let x = evt.clientX - container.offsetLeft - container.offsetWidth / 2;
-    let y = evt.clientY - container.offsetTop - container.offsetHeight / 2;
-    const point = new DOMPoint(x, y);
-    const revPoint = point.matrixTransform(matrix.inverse());
-
-    if (evt.deltaY > 0) {
-      scale = Math.max(MIN_SCALE, scale / 1.1);
-      // const currentScale = matrix.a;
-      // const maxChange = 1 / currentScale;
-      // const change = Math.max(1 / 1.1, 0);
-      // matrix = matrix.scale(change, change, 1, x, y);
-    } else {
-      scale = Math.min(100, scale * 1.1);
-      // matrix = matrix.scale(1.1, 1.1, 1, x, y);
-    }
-
-    const newMatrix = new DOMMatrix()
-      .translate(translate[0], translate[1])
-      .scale(scale);
-    const newRevPoint = point.matrixTransform(newMatrix.inverse());
-
-    const originDisplacement = [
-      newRevPoint.x - revPoint.x,
-      newRevPoint.y - revPoint.y,
-    ];
-
-    const topLeftPosition = new DOMPoint(
-      -container.offsetWidth / 2,
-      -container.offsetHeight / 2
-    ).matrixTransform(newMatrix);
-    const bottomRightPosition = new DOMPoint(
-      container.offsetWidth / 2,
-      container.offsetHeight / 2
-    ).matrixTransform(newMatrix);
-
-    const overflowAdjustment = [0, 0];
-    // TODO this is buggy
-    if (
-      topLeftPosition.x + originDisplacement[0] >
-      -container.offsetWidth / 2
-    ) {
-      overflowAdjustment[0] =
-        -container.offsetWidth / 2 -
-        (topLeftPosition.x + originDisplacement[0]);
-    } else if (
-      bottomRightPosition.x + originDisplacement[0] <
-      container.offsetWidth / 2
-    ) {
-      overflowAdjustment[0] =
-        container.offsetWidth / 2 -
-        (bottomRightPosition.x + originDisplacement[0]);
-    }
-    if (
-      topLeftPosition.y + originDisplacement[1] >
-      -container.offsetHeight / 2
-    ) {
-      overflowAdjustment[1] =
-        -container.offsetHeight / 2 -
-        (topLeftPosition.y + originDisplacement[1]);
-    } else if (
-      bottomRightPosition.y + originDisplacement[1] <
-      container.offsetHeight / 2
-    ) {
-      overflowAdjustment[1] =
-        container.offsetHeight / 2 -
-        (bottomRightPosition.y + originDisplacement[1]);
-    }
-
-    // Adjust position after scale
-    translate = [
-      translate[0] + scale * (originDisplacement[0] + overflowAdjustment[0]),
-      translate[1] + scale * (originDisplacement[1] + overflowAdjustment[1]),
-    ];
-  }
-
-  function handleMouseDown(evt: MouseEvent) {
-    evt.preventDefault();
-
-    function handleMouseMove(evt: MouseEvent) {
-      const x = evt.clientX - container.offsetLeft;
-      maskSize = Math.max(0, Math.min(1, x / container.offsetWidth));
-    }
-    function handleMouseUp() {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    }
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-  }
+  $: view = $diffViewSettings$?.image_mode;
+  $: isSingle = !($deltaPaths$?.new && $deltaPaths$.old);
 </script>
 
-<div
-  class="image-diff-view"
-  bind:this={container}
-  on:mousewheel={handleWheel}
-  style={scale > 2 ? `image-rendering: pixelated;` : ""}
->
-  <div class="image" style={`transform: ${matrix.toString()}`}>
-    <img alt="old" src={$deltaPaths$?.old} />
-    <!-- style={`transform: scale(${IMAGE_ORIGINAL_SCALE});`} -->
+<div class="image-diff-view">
+  <div class="header">
+    {#if !isSingle}
+      <ButtonGroup>
+        <button
+          on:click={() => changeImageDiffMode("SideBySide")}
+          class={classNames({
+            active: view === "SideBySide",
+          })}>Side by side</button
+        >
+        <button
+          on:click={() => changeImageDiffMode("Slide")}
+          class={classNames({
+            active: view === "Slide",
+          })}>Slide</button
+        >
+        <button
+          on:click={() => changeImageDiffMode("Opacity")}
+          class={classNames({
+            active: view === "Opacity",
+          })}>Opacity</button
+        >
+      </ButtonGroup>
+      <button on:click={() => setDiffDelta(null)}>Close</button>
+    {/if}
   </div>
-  <div
-    class="mask"
-    style={`clip-path: polygon(0% 0%, ${maskSize * 100}% 0%, ${
-      maskSize * 100
-    }% 100%, 0% 100%)`}
-  >
-    <div class="image" style={`transform: ${matrix.toString()};`}>
-      <img alt="new" src={$deltaPaths$?.new} />
-      <!-- style={`transform: scale(${IMAGE_ORIGINAL_SCALE});`} -->
-    </div>
-  </div>
-  <div
-    class="mask-resizer"
-    style={`left: ${maskSize * 100}%`}
-    on:mousedown={handleMouseDown}
-  />
+  {#if isSingle}
+    <div />
+  {:else if view === "SideBySide"}
+    <ImageSideBySide />
+  {:else if view === "Slide"}
+    <ImageOverlayDiff />
+  {:else if view === "Opacity"}
+    <ImageDiffOpacity />
+  {/if}
 </div>
 
 <style>
   .image-diff-view {
     flex: 1 1 auto;
-    overflow: hidden;
-    position: relative;
-    user-select: none;
-  }
-  .image {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-image: linear-gradient(
-      45deg,
-      #aaa 12.5%,
-      #666 12.5%,
-      #666 50%,
-      #aaa 50%,
-      #aaa 62.5%,
-      #666 62.5%,
-      #666 100%
-    );
-    background-size: 12px 12px;
     display: flex;
-    justify-content: center;
-    align-items: center;
+    flex-direction: column;
   }
-  .image img {
-    max-width: 100%;
-    max-height: 100%;
-  }
-  .mask {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-  }
-  .mask-resizer {
-    position: absolute;
-    top: 0;
-    height: 100%;
-    left: 66%;
-    transform: translateX(-50%);
-    width: 3px;
-    background-color: black;
-    border: 2px solid darkgray;
-    cursor: col-resize;
+  .header {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: space-between;
   }
 </style>
