@@ -30,5 +30,6 @@ module.exports = {
   rules: {
     "no-inner-declarations": "off",
     "svelte/no-inner-declarations": "off",
+    "@typescript-eslint/no-empty-function": "off",
   },
 };

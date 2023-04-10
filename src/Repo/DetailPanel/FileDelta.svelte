@@ -1,7 +1,12 @@
 <script lang="ts">
   import { qs } from "@/quickStyles";
   import tippy from "svelte-tippy";
-  import type { Delta, File, FileChange } from "./activeCommitChangesState";
+  import {
+    switchChangeType,
+    type Delta,
+    type File,
+    type FileChange,
+  } from "./activeCommitChangesState";
   import {
     changeColor,
     negativeColor,
@@ -16,8 +21,12 @@
   import VscGoToFile from "svelte-icons-pack/vsc/VscGoToFile";
   import RiDocumentFileTransferLine from "svelte-icons-pack/ri/RiDocumentFileTransferLine";
   import Icon from "svelte-icons-pack";
+  import { createEventDispatcher } from "svelte";
+  import classNames from "classnames";
+  import { selectedDelta$ } from "../DiffView/diffViewState";
 
   export let delta: Delta;
+  const dispatch = createEventDispatcher();
 
   $: file = switchChangeType(delta.change, {
     Added: ([v]) => v,
@@ -53,63 +62,18 @@
         ? { path: path.slice(0, lastSlash), name: path.slice(lastSlash) }
         : { path: "", name: path };
   }
-
-  function switchChangeType<T>(
-    value: FileChange,
-    options: Record<
-      "Added" | "Untracked" | "Copied" | "Deleted" | "Renamed" | "Modified",
-      (content: File[]) => T
-    >
-  ): T;
-  function switchChangeType<T>(
-    value: FileChange,
-    options: Partial<
-      Record<
-        "Added" | "Untracked" | "Copied" | "Deleted" | "Renamed" | "Modified",
-        (content: File[]) => T
-      >
-    >,
-    defaultValue: T
-  ): T;
-  function switchChangeType<T>(
-    value: FileChange,
-    options: Partial<
-      Record<
-        "Added" | "Untracked" | "Copied" | "Deleted" | "Renamed" | "Modified",
-        (content: File[]) => T
-      >
-    >,
-    defaultValue?: T
-  ): T {
-    if ("Added" in value && options.Added) {
-      return options.Added([value.Added]);
-    }
-    if ("Untracked" in value && options.Untracked) {
-      return options.Untracked([value.Untracked]);
-    }
-    if ("Copied" in value && options.Copied) {
-      return options.Copied(value.Copied);
-    }
-    if ("Deleted" in value && options.Deleted) {
-      return options.Deleted([value.Deleted]);
-    }
-    if ("Renamed" in value && options.Renamed) {
-      return options.Renamed(value.Renamed);
-    }
-    if ("Modified" in value && options.Modified) {
-      return options.Modified(value.Modified);
-    }
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return defaultValue!;
-  }
 </script>
 
 <li
-  class={classes.changeLine}
+  class={classNames(classes.changeLine, {
+    active: $selectedDelta$ === delta,
+  })}
   use:tippy={{
     placement: "left",
     content: file.path,
   }}
+  on:click={() => dispatch("click")}
+  on:keypress={(evt) => evt.code === "Enter" && dispatch("click")}
 >
   <div class={qs("horizontalFlex", "noOverflow", "centeredFlex")}>
     <span class={classes.changeIcon} style="color: {style}">

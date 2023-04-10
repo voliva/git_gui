@@ -46,7 +46,7 @@ globalStyle("#app", {
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-  maxHeight: "100vh",
+  height: "100vh",
 });
 
 globalStyle("a", {
@@ -62,6 +62,9 @@ globalStyle("a:hover", {
 globalStyle("svg", {
   outline: "none",
   fill: "currentColor",
+});
+globalStyle(`svg[fill=none]`, {
+  fill: "none",
 });
 
 globalStyle("h1, h2, h3, h4, h5, p", {
@@ -99,6 +102,12 @@ globalStyle("::-webkit-scrollbar-thumb", {
 
 globalStyle("button", {
   fontFamily,
+  borderRadius: 8,
+  padding: "0.2rem 0.5rem",
+});
+globalStyle("button.active", {
+  backgroundColor: "#222244", // TODO generic accent color
+  color: "white",
 });
 
 /*

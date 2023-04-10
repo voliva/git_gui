@@ -21,6 +21,11 @@ export const changeLine = style({
   ":hover": {
     background: hoverBgColor,
   },
+  selectors: {
+    "&.active": {
+      backgroundColor: "#222244",
+    },
+  },
 });
 export const changeIcon = style({
   display: "inline-flex",
