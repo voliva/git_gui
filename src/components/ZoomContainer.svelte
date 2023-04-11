@@ -14,6 +14,21 @@
   $: scale = $store.scale;
   $: matrix = new DOMMatrix().translate(translate.x, translate.y).scale(scale);
 
+  function getBoundsFn(scale: number) {
+    const scaledWidth = {
+      x: container.offsetWidth * scale,
+      y: container.offsetHeight * scale,
+    };
+    const maxTransform = {
+      x: (scaledWidth.x - container.offsetWidth) / 2,
+      y: (scaledWidth.y - container.offsetHeight) / 2,
+    };
+    return {
+      x: (v: number) => Math.max(-maxTransform.x, Math.min(maxTransform.x, v)),
+      y: (v: number) => Math.max(-maxTransform.y, Math.min(maxTransform.y, v)),
+    };
+  }
+
   function handleWheel(evt: WheelEvent) {
     if (isDragging) return;
 
@@ -41,52 +56,12 @@
         newRevPoint.y - revPoint.y,
       ];
 
-      const topLeftPosition = new DOMPoint(
-        -container.offsetWidth / 2,
-        -container.offsetHeight / 2
-      ).matrixTransform(newMatrix);
-      const bottomRightPosition = new DOMPoint(
-        container.offsetWidth / 2,
-        container.offsetHeight / 2
-      ).matrixTransform(newMatrix);
-
-      const overflowAdjustment = { x: 0, y: 0 };
-      // TODO this is buggy
-      if (
-        topLeftPosition.x + originDisplacement[0] >
-        -container.offsetWidth / 2
-      ) {
-        overflowAdjustment.x =
-          -container.offsetWidth / 2 -
-          (topLeftPosition.x + originDisplacement[0]);
-      } else if (
-        bottomRightPosition.x + originDisplacement[0] <
-        container.offsetWidth / 2
-      ) {
-        overflowAdjustment.x =
-          container.offsetWidth / 2 -
-          (bottomRightPosition.x + originDisplacement[0]);
-      }
-      if (
-        topLeftPosition.y + originDisplacement[1] >
-        -container.offsetHeight / 2
-      ) {
-        overflowAdjustment.y =
-          -container.offsetHeight / 2 -
-          (topLeftPosition.y + originDisplacement[1]);
-      } else if (
-        bottomRightPosition.y + originDisplacement[1] <
-        container.offsetHeight / 2
-      ) {
-        overflowAdjustment.y =
-          container.offsetHeight / 2 -
-          (bottomRightPosition.y + originDisplacement[1]);
-      }
+      const bounds = getBoundsFn(scale);
 
       // Adjust position after scale
       translate = {
-        x: translate.x + scale * (originDisplacement[0] + overflowAdjustment.x),
-        y: translate.y + scale * (originDisplacement[1] + overflowAdjustment.y),
+        x: bounds.x(translate.x + scale * originDisplacement[0]),
+        y: bounds.y(translate.y + scale * originDisplacement[1]),
       };
 
       return { translate, scale };
@@ -101,27 +76,14 @@
       y: translate.y - evt.pageY,
     };
 
-    const scaledWidth = {
-      x: container.offsetWidth * scale,
-      y: container.offsetHeight * scale,
-    };
-    const maxTransform = {
-      x: (scaledWidth.x - container.offsetWidth) / 2,
-      y: (scaledWidth.y - container.offsetHeight) / 2,
-    };
+    const bounds = getBoundsFn(scale);
 
     function handleMouseMove(evt: MouseEvent) {
       store.update((prev) => ({
         ...prev,
         translate: {
-          x: Math.max(
-            -maxTransform.x,
-            Math.min(maxTransform.x, start.x + evt.pageX)
-          ),
-          y: Math.max(
-            -maxTransform.y,
-            Math.min(maxTransform.y, start.y + evt.pageY)
-          ),
+          x: bounds.x(start.x + evt.pageX),
+          y: bounds.y(start.y + evt.pageY),
         },
       }));
     }
