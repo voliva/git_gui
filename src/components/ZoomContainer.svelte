@@ -8,12 +8,15 @@
   export let containerClass = "";
 
   export let store: Writable<ZoomState> = createZoomStore();
+  let isDragging = false;
 
   $: translate = $store.translate;
   $: scale = $store.scale;
   $: matrix = new DOMMatrix().translate(translate.x, translate.y).scale(scale);
 
   function handleWheel(evt: WheelEvent) {
+    if (isDragging) return;
+
     evt.preventDefault();
 
     store.update(({ translate, scale }) => {
@@ -89,6 +92,47 @@
       return { translate, scale };
     });
   }
+  function handleMouseDown(evt: MouseEvent) {
+    evt.preventDefault();
+
+    isDragging = true;
+    const start = {
+      x: translate.x - evt.pageX,
+      y: translate.y - evt.pageY,
+    };
+
+    const scaledWidth = {
+      x: container.offsetWidth * scale,
+      y: container.offsetHeight * scale,
+    };
+    const maxTransform = {
+      x: (scaledWidth.x - container.offsetWidth) / 2,
+      y: (scaledWidth.y - container.offsetHeight) / 2,
+    };
+
+    function handleMouseMove(evt: MouseEvent) {
+      store.update((prev) => ({
+        ...prev,
+        translate: {
+          x: Math.max(
+            -maxTransform.x,
+            Math.min(maxTransform.x, start.x + evt.pageX)
+          ),
+          y: Math.max(
+            -maxTransform.y,
+            Math.min(maxTransform.y, start.y + evt.pageY)
+          ),
+        },
+      }));
+    }
+    function handleMouseUp() {
+      isDragging = false;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    }
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  }
 </script>
 
 <div
@@ -96,6 +140,7 @@
   style={scale > 2 ? `image-rendering: pixelated;` : ""}
   bind:this={container}
   on:wheel={handleWheel}
+  on:mousedown={handleMouseDown}
 >
   <slot
     {scale}
