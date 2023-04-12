@@ -114,7 +114,9 @@ export const deltaPaths$ = selectedDelta$.pipeState(
     )}`;
     return {
       old: old_file && `${prefix}/${old_file.id}`,
-      new: new_file && `${prefix}/${new_file.id}`,
+      new:
+        new_file &&
+        `${prefix}/${new_file.id}?file=${encodeURIComponent(new_file.path)}`,
     };
   })
 );

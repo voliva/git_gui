@@ -1,5 +1,10 @@
-use crate::commands::serializer::delta::Delta;
-use git2::{DiffHunk, DiffOptions, Oid, Repository};
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+};
+
+use crate::commands::serializer::delta::{Delta, File};
+use git2::{Blob, DiffHunk, DiffOptions, Oid, Repository};
 use logging_timer::time;
 use serde::Serialize;
 
@@ -32,7 +37,7 @@ impl<'a> From<DiffHunk<'a>> for Hunk {
 #[time]
 #[tauri::command(async)]
 pub fn get_diff(path: String, delta: Delta) -> Result<DeltaDiff, GitError> {
-    let repo = Repository::open(path)?;
+    let repo = Repository::open(path.clone())?;
 
     let (old_file, new_file) = match delta.change {
         FileChange::Added(new) => (None, Some(new)),
@@ -43,12 +48,8 @@ pub fn get_diff(path: String, delta: Delta) -> Result<DeltaDiff, GitError> {
         FileChange::Modified(old, new) => (Some(old), Some(new)),
     };
 
-    let old_blob = old_file
-        .and_then(|file| Oid::from_str(&file.id).ok())
-        .and_then(|id| repo.find_blob(id).ok());
-    let new_blob = new_file
-        .and_then(|file| Oid::from_str(&file.id).ok())
-        .and_then(|id| repo.find_blob(id).ok());
+    let old_blob = old_file.and_then(|file| get_file_blob(&repo, &path, &file));
+    let new_blob = new_file.and_then(|file| get_file_blob(&repo, &path, &file));
 
     let old_content = old_blob.as_ref().and_then(|blob| {
         // TODO Case it's not utf_8? is it posible?
@@ -88,5 +89,23 @@ pub fn get_diff(path: String, delta: Delta) -> Result<DeltaDiff, GitError> {
         old_file: old_content,
         new_file: new_content,
         hunks,
+    })
+}
+
+fn get_file_blob<'a>(repo: &'a Repository, path: &str, file: &File) -> Option<Blob<'a>> {
+    let path = Path::new(path);
+
+    Oid::from_str(&file.id).ok().and_then(|oid| {
+        if oid.is_zero() {
+            PathBuf::from_str(&file.path)
+                .ok()
+                .and_then(|file_path| {
+                    let absolute_path = path.join(file_path);
+                    repo.blob_path(&absolute_path).ok()
+                })
+                .and_then(|oid| repo.find_blob(oid).ok())
+        } else {
+            repo.find_blob(oid).ok()
+        }
     })
 }

@@ -23,7 +23,7 @@
   <RepoHeader />
 
   <div class={qs("boxFill", "horizontalFlex", "noOverflow")}>
-    {#if $selectedDelta$?.binary}
+    {#if $selectedDelta$?.mime_type?.startsWith("image")}
       <ImageDiffView />
     {:else if $selectedDelta$}
       <DiffView />

@@ -17,6 +17,7 @@ use logging_timer::time;
 use mime_sniffer::MimeTypeSniffer;
 use notify::RecommendedWatcher;
 use port_check::free_local_port;
+use std::path::Path;
 use std::str::FromStr;
 use std::{sync::Mutex, thread};
 use tauri::{CustomMenuItem, Manager, Menu, State, Submenu};
@@ -55,10 +56,17 @@ impl Fairing for CORS {
     }
 }
 
-#[rocket::get("/raw/<path>/<id>")]
-fn get_raw_file(path: &str, id: &str) -> (rocket::http::ContentType, Vec<u8>) {
+#[rocket::get("/raw/<path>/<id>?<file>")]
+fn get_raw_file(path: &str, id: &str, file: Option<&str>) -> (rocket::http::ContentType, Vec<u8>) {
     let repo = git2::Repository::open(path).unwrap();
-    let blob = repo.find_blob(git2::Oid::from_str(id).unwrap()).unwrap();
+    let id = git2::Oid::from_str(id).and_then(|id| {
+        if id.is_zero() {
+            repo.blob_path(&Path::new(path).join(file.unwrap()))
+        } else {
+            Ok(id)
+        }
+    });
+    let blob = repo.find_blob(id.unwrap()).unwrap();
     let content = blob.content();
 
     let content_type = content

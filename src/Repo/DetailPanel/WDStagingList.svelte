@@ -2,6 +2,7 @@
   import { createEventDispatcher } from "svelte";
   import type { Delta } from "./activeCommitChangesState";
   import FileDelta from "./FileDelta.svelte";
+  import { selectedDelta$, setDiffDelta } from "../DiffView/diffViewState";
 
   export let title: string;
   export let deltas: Delta[];
@@ -25,12 +26,20 @@
   </div>
   <ul class="staging-list">
     {#each deltas as delta}
-      <FileDelta {delta}>
+      <FileDelta
+        {delta}
+        on:click={() => {
+          if (!delta.binary || delta.mime_type?.startsWith("image")) {
+            setDiffDelta(delta);
+          }
+        }}
+      >
         <input
           type="checkbox"
           {checked}
           on:click={(evt) => {
             evt.preventDefault();
+            evt.stopPropagation();
             dispatch("select", delta);
           }}
         />

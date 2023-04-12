@@ -1,3 +1,4 @@
+use git2::Oid;
 use rocket::http::ContentType;
 use serde::{Deserialize, Serialize};
 
@@ -14,8 +15,16 @@ pub struct File {
 
 impl<'a> From<git2::DiffFile<'a>> for File {
     fn from(value: git2::DiffFile) -> Self {
+        // On some cases a modified file in the working directory would come with an id that doesn't exist.
+        // This protects against this case.
+        let id = if value.is_valid_id() {
+            value.id().to_string()
+        } else {
+            Oid::zero().to_string()
+        };
+
         File {
-            id: value.id().to_string(),
+            id,
             path: value
                 .path()
                 .and_then(|buf| buf.to_str())
@@ -49,7 +58,7 @@ impl FileChange {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Delta {
     pub change: FileChange,
     binary: bool,

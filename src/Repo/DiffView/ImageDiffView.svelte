@@ -10,6 +10,7 @@
   import classNames from "classnames";
   import ImageSideBySide from "./ImageSideBySide.svelte";
   import ImageDiffOpacity from "./ImageDiffOpacity.svelte";
+  import ImageSingleView from "./ImageSingleView.svelte";
 
   $: view = $diffViewSettings$?.image_mode;
   $: isSingle = !($deltaPaths$?.new && $deltaPaths$.old);
@@ -42,7 +43,7 @@
     {/if}
   </div>
   {#if isSingle}
-    <div />
+    <ImageSingleView />
   {:else if view === "SideBySide"}
     <ImageSideBySide />
   {:else if view === "Slide"}
