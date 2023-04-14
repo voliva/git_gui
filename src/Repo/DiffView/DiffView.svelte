@@ -117,12 +117,14 @@
           hunks.map((h) => ({
             header: h.header,
             range: h.old_range,
+            original: h,
           }))
         );
         const [modifiedVZ, cleanupModifiedVZ] = viewZoneSetter(
           hunks.map((h) => ({
             header: h.header,
             range: h.new_range,
+            original: h,
           }))
         );
         originalEditor.changeViewZones(originalVZ);

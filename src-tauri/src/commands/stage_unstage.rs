@@ -1,9 +1,18 @@
-use std::path::PathBuf;
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
-use super::serializer::delta::{Delta, FileChange};
-use git2::{ErrorCode, Index, IndexAddOption, Repository};
+use super::{
+    get_file_blob,
+    serializer::delta::{Delta, FileChange},
+    Hunk,
+};
+use git2::{DiffOptions, ErrorCode, Index, IndexAddOption, Repository};
+use itertools::Itertools;
 use logging_timer::time;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
 pub enum StageError {
@@ -140,3 +149,169 @@ fn remove_from_index(repo: &Repository, path: &str) -> Result<(), StageError> {
     index.write()?;
     Ok(())
 }
+
+#[time]
+#[tauri::command(async)]
+pub fn stage_hunk(path: String, delta: Delta, hunk: Hunk) -> Result<(), StageError> {
+    let patch_file = generate_patch_file(&path, delta, hunk, false)?;
+    let mut f = File::create("patchfile.patch").unwrap();
+    f.write(patch_file.as_slice()).unwrap();
+
+    let diff = git2::Diff::from_buffer(patch_file.as_slice())?;
+
+    let repo = Repository::open(path)?;
+    repo.apply(&diff, git2::ApplyLocation::Index, None)?;
+
+    Ok(())
+}
+
+#[time]
+#[tauri::command(async)]
+pub fn unstage_hunk(path: String, delta: Delta, hunk: Hunk) -> Result<(), StageError> {
+    let patch_file = generate_patch_file(&path, delta, hunk, true)?;
+    let diff = git2::Diff::from_buffer(&patch_file[..])?;
+
+    let repo = Repository::open(path)?;
+    repo.apply(&diff, git2::ApplyLocation::Index, None)?;
+
+    Ok(())
+}
+
+fn generate_patch_file(
+    path: &str,
+    delta: Delta,
+    hunk: Hunk,
+    revert: bool,
+) -> Result<Vec<u8>, StageError> {
+    let repo = Repository::open(path.to_owned())?;
+
+    let (old_file, new_file) = match delta.change {
+        // FileChange::Untracked(f) => add_from_working_dir(&repo, Some(&f.path)),
+        // FileChange::Renamed(old, new) => {
+        //     remove_from_index(&repo, &old.path)?;
+        //     add_from_working_dir(&repo, Some(&new.path))
+        // }
+        FileChange::Modified(old, new) => (old, new),
+        v => unreachable!("unreachable {:?}", v),
+    };
+
+    let mut lines = vec![
+        format!("diff --git a/{} b/{}\n", old_file.path, new_file.path)
+            .as_bytes()
+            .to_owned(),
+        format!("--- a/{}\n", old_file.path).as_bytes().to_owned(),
+        format!("+++ b/{}\n", new_file.path).as_bytes().to_owned(),
+        hunk.header.to_owned().as_bytes().to_owned(),
+    ];
+
+    let old_blob = get_file_blob(&repo, path, &old_file);
+    let new_blob = get_file_blob(&repo, path, &new_file);
+
+    let mut options = DiffOptions::default();
+
+    println!(
+        "{:?} {:?} {:?}",
+        path,
+        old_blob.as_ref().unwrap().id(),
+        new_blob.as_ref().unwrap().id()
+    );
+
+    repo.diff_blobs(
+        old_blob.as_ref(),
+        None,
+        new_blob.as_ref(),
+        None,
+        Some(&mut options),
+        None,
+        None,
+        None,
+        Some(&mut |_, diff_hunk, line| {
+            if let Some(diff_hunk) = diff_hunk {
+                if (diff_hunk.old_start(), diff_hunk.old_lines()) == hunk.old_range {
+                    let line_origin = if revert {
+                        revert_origin(line.origin())
+                    } else {
+                        line.origin()
+                    };
+                    let origin = format!("{}", line_origin).as_bytes().to_owned();
+
+                    lines.push(
+                        origin
+                            .into_iter()
+                            .chain(line.content().to_owned().into_iter())
+                            .collect(),
+                    );
+                }
+            }
+            return true;
+        }),
+    )?;
+
+    Ok(lines.join(&[] as &[u8]))
+}
+
+fn revert_origin(origin: char) -> char {
+    match origin {
+        '+' => '-',
+        '-' => '+',
+        '>' => '<',
+        '<' => '>',
+        c => c,
+    }
+}
+
+#[derive(Deserialize)]
+pub enum LineChange {
+    Add { after: usize, content: String },
+    Remove(usize),
+}
+
+#[time]
+#[tauri::command(async)]
+pub fn stage_line(path: String, delta: Delta, change: LineChange) -> Result<(), StageError> {
+    let repo = Repository::open(path.clone())?;
+    let target_idx = match change {
+        LineChange::Add { after, content: _ } => after,
+        LineChange::Remove(line) => line - 1,
+    };
+
+    let file = delta.change.get_oldest_file();
+    let blob = get_file_blob(&repo, &path, file).unwrap();
+    let data = blob
+        .content()
+        .split(|v| *v == '\n' as u8)
+        .enumerate()
+        .flat_map(|(line_idx, line)| {
+            if line_idx == target_idx {
+                return match &change {
+                    LineChange::Add { after: _, content } => vec![content
+                        .as_bytes()
+                        .iter()
+                        .chain(line.iter())
+                        .map(|v| *v)
+                        .collect_vec()],
+                    LineChange::Remove(_) => vec![],
+                };
+            }
+            return vec![line.into()];
+        })
+        .collect_vec()
+        .join(&['\n' as u8] as &[u8]);
+
+    // Should be the same format as
+    // let diff = repo.diff_index_to_workdir(None, None)?;
+    // diff.print(git2::DiffFormat::Patch, |_, _, line| {
+    //     print!("{}", std::str::from_utf8(line.content())?);
+    //     true
+    // });
+
+    let mut index = repo.index()?;
+    let entry = index.get_path(Path::new(&file.path), 0).unwrap();
+
+    index.add_frombuffer(&entry, &data[..])?;
+    index.write()?;
+
+    Ok(())
+}
+
+// unstage_line is the opposite of stage_line

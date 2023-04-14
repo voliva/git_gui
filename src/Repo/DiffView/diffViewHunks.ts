@@ -5,6 +5,10 @@ import {
   hunkHeaderContent,
 } from "./diffView.css";
 import { qs } from "@/quickStyles";
+import { firstValueFrom } from "rxjs";
+import { selectedDelta$, type Hunk } from "./diffViewState";
+import { invoke } from "@tauri-apps/api";
+import { repoPath$ } from "../repoState";
 
 export function getHiddenRanges(
   hunkRanges: Array<[number, number]>,
@@ -26,11 +30,13 @@ export function getHiddenRanges(
 
   return res;
 }
+//
 
 export function viewZoneSetter(
   hunks: Array<{
     header: string;
     range: [number, number];
+    original: Hunk;
   }>
 ) {
   const addedZones: Array<string> = [];
@@ -53,6 +59,19 @@ export function viewZoneSetter(
       if (headerText) {
         headerContent.textContent = "@ " + headerText;
       }
+
+      const stage = document.createElement("button");
+      stage.textContent = "Stage";
+      stage.onclick = async () => {
+        const delta = await firstValueFrom(selectedDelta$);
+        const path = await firstValueFrom(repoPath$);
+        invoke("stage_hunk", {
+          path,
+          delta,
+          hunk: hunk.original,
+        });
+      };
+      headerContainer.appendChild(stage);
 
       const zone: monaco.editor.IViewZone = {
         afterLineNumber: i === 0 ? 0 : hunk.range[0] - 1,

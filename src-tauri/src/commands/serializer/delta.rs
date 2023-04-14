@@ -45,16 +45,35 @@ pub enum FileChange {
 }
 
 impl FileChange {
-    fn get_newest_file(&self) -> File {
-        let file = match self {
+    pub fn get_newest_file(&self) -> &File {
+        match self {
             FileChange::Added(f) => f,
             FileChange::Untracked(f) => f,
             FileChange::Copied(_, f) => f,
             FileChange::Deleted(f) => f,
             FileChange::Renamed(_, f) => f,
             FileChange::Modified(_, f) => f,
-        };
-        file.clone()
+        }
+    }
+    pub fn get_oldest_file(&self) -> &File {
+        match self {
+            FileChange::Added(f) => f,
+            FileChange::Untracked(f) => f,
+            FileChange::Copied(f, _) => f,
+            FileChange::Deleted(f) => f,
+            FileChange::Renamed(f, _) => f,
+            FileChange::Modified(f, _) => f,
+        }
+    }
+    pub fn get_files(&self) -> (Option<&File>, Option<&File>) {
+        match self {
+            FileChange::Added(new) => (None, Some(new)),
+            FileChange::Untracked(new) => (None, Some(new)),
+            FileChange::Copied(old, new) => (Some(old), Some(new)),
+            FileChange::Deleted(old) => (Some(old), None),
+            FileChange::Renamed(old, new) => (Some(old), Some(new)),
+            FileChange::Modified(old, new) => (Some(old), Some(new)),
+        }
     }
 }
 
@@ -90,7 +109,7 @@ impl<'a> TryFrom<git2::DiffDelta<'a>> for Delta {
         };
         let binary = value.flags().is_binary();
 
-        let path = change.get_newest_file().path;
+        let path = change.get_newest_file().path.clone();
         let last_point = path.len() - path.chars().rev().take_while(|x| x != &'.').count();
         let extension = if last_point > 0 {
             Some(&path[last_point..])
