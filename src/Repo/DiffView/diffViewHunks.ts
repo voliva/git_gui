@@ -1,14 +1,11 @@
+import { qs } from "@/quickStyles";
 import * as monaco from "monaco-editor";
 import {
   firstHunk,
   hunkHeaderContainer,
   hunkHeaderContent,
 } from "./diffView.css";
-import { qs } from "@/quickStyles";
-import { firstValueFrom } from "rxjs";
-import { selectedDelta$, type Hunk } from "./diffViewState";
-import { invoke } from "@tauri-apps/api";
-import { repoPath$ } from "../repoState";
+import type { Hunk } from "./diffViewState";
 
 export function getHiddenRanges(
   hunkRanges: Array<[number, number]>,
@@ -30,16 +27,17 @@ export function getHiddenRanges(
 
   return res;
 }
-//
 
 export function viewZoneSetter(
   hunks: Array<{
     header: string;
     range: [number, number];
     original: Hunk;
-  }>
+  }>,
+  content?: (container: HTMLElement, hunk: Hunk) => (() => void) | void
 ) {
   const addedZones: Array<string> = [];
+  const cleanupFns: Array<() => void> = [];
   const setter = (accessor: monaco.editor.IViewZoneChangeAccessor) => {
     hunks.forEach((hunk, i) => {
       const headerText = getHeader(hunk.header);
@@ -60,18 +58,8 @@ export function viewZoneSetter(
         headerContent.textContent = "@ " + headerText;
       }
 
-      const stage = document.createElement("button");
-      stage.textContent = "Stage";
-      stage.onclick = async () => {
-        const delta = await firstValueFrom(selectedDelta$);
-        const path = await firstValueFrom(repoPath$);
-        invoke("stage_hunk", {
-          path,
-          delta,
-          hunk: hunk.original,
-        });
-      };
-      headerContainer.appendChild(stage);
+      const cFn = content?.(headerContainer, hunk.original) ?? (() => void 0);
+      cleanupFns.push(cFn);
 
       const zone: monaco.editor.IViewZone = {
         afterLineNumber: i === 0 ? 0 : hunk.range[0] - 1,
@@ -85,6 +73,8 @@ export function viewZoneSetter(
   const cleanup = (accessor: monaco.editor.IViewZoneChangeAccessor) => {
     addedZones.forEach((id) => accessor.removeZone(id));
     addedZones.length = 0;
+    cleanupFns.forEach((fn) => fn());
+    cleanupFns.length = 0;
   };
 
   return [setter, cleanup];

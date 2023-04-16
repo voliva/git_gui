@@ -25,7 +25,7 @@ export const firstHunk = style({
 
 export const hunkHeaderContent = style({
   background: `var(--vscode-editorGutter-background, ${appBackground})`,
-  width: "100%",
+  paddingRight: "1rem",
   color: appForeground,
   opacity: 0.66,
 });

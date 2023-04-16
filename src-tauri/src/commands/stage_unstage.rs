@@ -154,8 +154,8 @@ fn remove_from_index(repo: &Repository, path: &str) -> Result<(), StageError> {
 #[tauri::command(async)]
 pub fn stage_hunk(path: String, delta: Delta, hunk: Hunk) -> Result<(), StageError> {
     let patch_file = generate_patch_file(&path, delta, hunk, false)?;
-    let mut f = File::create("patchfile.patch").unwrap();
-    f.write(patch_file.as_slice()).unwrap();
+    // let mut f = File::create("patchfile.patch").unwrap();
+    // f.write(patch_file.as_slice()).unwrap();
 
     let diff = git2::Diff::from_buffer(patch_file.as_slice())?;
 
@@ -195,26 +195,32 @@ fn generate_patch_file(
         v => unreachable!("unreachable {:?}", v),
     };
 
+    let (old_start, old_length) = hunk.old_range;
+    let (new_start, new_length) = hunk.new_range;
+    let hunk_start = if revert { new_start } else { old_start };
+    let hunk_old_length = if revert { new_length } else { old_length };
+    let hunk_new_length = if revert { old_length } else { new_length };
     let mut lines = vec![
         format!("diff --git a/{} b/{}\n", old_file.path, new_file.path)
             .as_bytes()
             .to_owned(),
         format!("--- a/{}\n", old_file.path).as_bytes().to_owned(),
         format!("+++ b/{}\n", new_file.path).as_bytes().to_owned(),
-        hunk.header.to_owned().as_bytes().to_owned(),
+        // We can't use the pre-existing hunk.header because we're only changing the selected one. `hunk.header` can have the rows shifted with previous hunks.
+        format!(
+            "@@ -{},{} +{},{} @@\n",
+            hunk_start, hunk_old_length, hunk_start, hunk_new_length
+        )
+        .as_bytes()
+        .to_owned(),
     ];
 
     let old_blob = get_file_blob(&repo, path, &old_file);
     let new_blob = get_file_blob(&repo, path, &new_file);
 
     let mut options = DiffOptions::default();
-
-    println!(
-        "{:?} {:?} {:?}",
-        path,
-        old_blob.as_ref().unwrap().id(),
-        new_blob.as_ref().unwrap().id()
-    );
+    // let mut other_hunk_changes: isize = 0;
+    // let mut found_hunk = false;
 
     repo.diff_blobs(
         old_blob.as_ref(),
@@ -225,6 +231,17 @@ fn generate_patch_file(
         None,
         None,
         None,
+        // Some(&mut |_, diff_hunk| {
+        //     if found_hunk {
+        //         return false
+        //     }
+        //     if (diff_hunk.old_start(), diff_hunk.old_lines()) == hunk.old_range {
+        //         found_hunk = true;
+        //     } else {
+        //         other_hunk_changes += diff_hunk.new_lines()
+        //     }
+        //     return true
+        // }),
         Some(&mut |_, diff_hunk, line| {
             if let Some(diff_hunk) = diff_hunk {
                 if (diff_hunk.old_start(), diff_hunk.old_lines()) == hunk.old_range {

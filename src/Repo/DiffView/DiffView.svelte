@@ -20,9 +20,14 @@
     diffViewSettings$,
     selectedDelta$,
     setDiffDelta,
+    selectedDeltaKind$,
+    type Hunk,
   } from "./diffViewState";
   import ButtonGroup from "@/components/ButtonGroup.svelte";
   import classNames from "classnames";
+  import { firstValueFrom } from "rxjs";
+  import { repoPath$ } from "../repoState";
+  import { invoke } from "@tauri-apps/api";
 
   self.MonacoEnvironment = {
     getWorker: function (_, label) {
@@ -118,14 +123,16 @@
             header: h.header,
             range: h.old_range,
             original: h,
-          }))
+          })),
+          populateHunkContent
         );
         const [modifiedVZ, cleanupModifiedVZ] = viewZoneSetter(
           hunks.map((h) => ({
             header: h.header,
             range: h.new_range,
             original: h,
-          }))
+          })),
+          populateHunkContent
         );
         originalEditor.changeViewZones(originalVZ);
         modifiedEditor.changeViewZones(modifiedVZ);
@@ -152,6 +159,25 @@
       query: version,
     });
     return res;
+  }
+
+  function populateHunkContent(container: HTMLElement, hunk: Hunk) {
+    if (!$selectedDeltaKind$ || $selectedDeltaKind$ === "commit") {
+      return;
+    }
+
+    const button = document.createElement("button");
+    button.textContent = $selectedDeltaKind$ === "staged" ? "Unstage" : "Stage";
+    button.onclick = async () => {
+      const delta = $selectedDelta$;
+      const path = await firstValueFrom(repoPath$);
+      invoke($selectedDeltaKind$ === "staged" ? "unstage_hunk" : "stage_hunk", {
+        path,
+        delta,
+        hunk,
+      });
+    };
+    container.appendChild(button);
   }
 </script>
 

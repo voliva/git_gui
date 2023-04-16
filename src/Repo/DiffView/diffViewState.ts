@@ -1,4 +1,4 @@
-import { state } from "@react-rxjs/core";
+import { state, withDefault } from "@react-rxjs/core";
 import { createSignal, mergeWithKey } from "@react-rxjs/utils";
 import { invoke } from "@tauri-apps/api";
 import {
@@ -77,10 +77,21 @@ export const diffViewSettings$ = state(
   )
 );
 
-export const [diffDeltaChange$, setDiffDelta] = createSignal<Delta | null>();
-export const selectedDelta$ = state(
-  diffDeltaChange$.pipe(distinctUntilChanged()),
-  null
+type SelectedDeltaWithKind = {
+  kind: "commit" | "staged" | "unstaged";
+  delta: Delta;
+};
+export const [diffDeltaChange$, setDiffDelta] =
+  createSignal<SelectedDeltaWithKind | null>();
+const selectedDeltaWithKind$ = state(diffDeltaChange$);
+export const selectedDelta$ = selectedDeltaWithKind$.pipeState(
+  map((v) => v?.delta ?? null),
+  distinctUntilChanged(),
+  withDefault(null)
+);
+export const selectedDeltaKind$ = selectedDeltaWithKind$.pipeState(
+  map((v) => v?.kind ?? null),
+  withDefault(null)
 );
 
 export const diffDelta$ = selectedDelta$.pipeState(

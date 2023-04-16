@@ -59,6 +59,7 @@ impl Fairing for CORS {
 
 #[rocket::get("/raw/<path>/<id>?<file>")]
 fn get_raw_file(path: &str, id: &str, file: Option<&str>) -> (rocket::http::ContentType, Vec<u8>) {
+    // first
     let repo = git2::Repository::open(path).unwrap();
     let id = git2::Oid::from_str(id).and_then(|id| {
         if id.is_zero() {
@@ -101,6 +102,7 @@ fn main() {
             get_diff_settings,
             set_diff_settings,
             open_repo,
+            // something something
             stage,
             stage_hunk,
             stage_line,
