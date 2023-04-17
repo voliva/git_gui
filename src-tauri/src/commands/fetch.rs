@@ -2,12 +2,15 @@ use std::{env, thread};
 
 use git2::{AutotagOption, Cred, CredentialType, FetchOptions, RemoteCallbacks, Repository};
 use itertools::Itertools;
+use log::info;
 use logging_timer::{executing, timer};
 
+use super::serializer::git_error::GitError;
+
 #[tauri::command(async)]
-pub fn fetch(path: String) {
+pub fn fetch(path: String) -> Result<(), GitError> {
     let tmr = timer!("fetch()");
-    let repo = Repository::open(path.clone()).unwrap();
+    let repo = Repository::open(path.clone())?;
     let remotes = get_remotes(&repo);
 
     executing!(tmr, "get remotes");
@@ -68,7 +71,7 @@ pub fn fetch(path: String) {
                     ))
                 });
                 cb.transfer_progress(|progress| {
-                    println!(
+                    info!(
                         "Transfer progress {} {}/{}",
                         progress.received_bytes(),
                         progress.received_objects(),
@@ -101,6 +104,8 @@ pub fn fetch(path: String) {
         .for_each(|handle| {
             handle.join().ok();
         });
+
+    Ok(())
 }
 
 fn get_remotes(repo: &Repository) -> Vec<String> {

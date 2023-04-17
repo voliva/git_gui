@@ -1,4 +1,5 @@
 use git2::Oid;
+use log::{error, warn};
 use rocket::http::ContentType;
 use serde::{Deserialize, Serialize};
 
@@ -91,7 +92,7 @@ impl<'a> TryFrom<git2::DiffDelta<'a>> for Delta {
         let change = match value.status() {
             git2::Delta::Added => FileChange::Added(value.new_file().into()),
             git2::Delta::Copied => {
-                println!("Copied!!!"); // I couldn't see any instance of this happening?
+                warn!("Copied!!!"); // I couldn't see any instance of this happening?
                 FileChange::Copied(value.old_file().into(), value.new_file().into())
             }
             git2::Delta::Deleted => FileChange::Deleted(value.old_file().into()),
@@ -103,7 +104,7 @@ impl<'a> TryFrom<git2::DiffDelta<'a>> for Delta {
             }
             git2::Delta::Untracked => FileChange::Untracked(value.new_file().into()),
             v => {
-                println!("unsupported delta type {:?}", v);
+                error!("unsupported delta type {:?}", v);
                 return Err(DeltaReadError::UnsupportedDeltaType);
             }
         };
@@ -119,7 +120,6 @@ impl<'a> TryFrom<git2::DiffDelta<'a>> for Delta {
         let mime_type = extension
             .and_then(|ext| ContentType::from_extension(ext))
             .map(|content_type| content_type.to_string());
-        println!("Extension {:?} mime_type {:?}", extension, mime_type);
 
         Ok(Delta {
             change,

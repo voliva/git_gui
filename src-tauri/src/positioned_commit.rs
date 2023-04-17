@@ -228,13 +228,6 @@ where
             .remove(&commit.id().to_string())
             .unwrap_or(vec![]);
 
-        if commit.id().to_string().starts_with("4fdec4") {
-            println!("4fdec4 {:?}", commit.parent_ids().collect_vec());
-        }
-        if commit.id().to_string().starts_with("1aff80") {
-            println!("1aff80 {:?}", descendants);
-        }
-
         Some(PositionedCommit {
             commit: CommitInfo::new(&commit),
             position,
@@ -254,11 +247,6 @@ pub fn get_positioned_commits<'a>(
 }
 
 fn get_revwalk(repo: &Repository) -> Result<Revwalk, Error> {
-    // let refs = repo.references().unwrap();
-    // for reference in refs {
-    //     println!("Ref: {:?}", reference.unwrap().name());
-    // }
-
     let mut walker = repo.revwalk()?;
     walker.set_sorting(Sort::TOPOLOGICAL.union(Sort::TIME))?;
 

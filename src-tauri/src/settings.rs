@@ -1,3 +1,4 @@
+use log::error;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::fs;
 use tauri::api::path;
@@ -77,7 +78,7 @@ fn get_settings(app: &tauri::AppHandle, filename: &str) -> Option<String> {
         .and_then(|path| match fs::read_to_string(path) {
             Ok(str) => Some(str),
             Err(e) => {
-                println!("Error reading settings {} {:?}", filename, e);
+                error!("Error reading settings {} {:?}", filename, e);
                 None
             }
         })
@@ -87,7 +88,7 @@ fn get_json_settings<T: DeserializeOwned>(app: &tauri::AppHandle, filename: &str
     get_settings(app, filename).and_then(|str| match serde_json::from_str(&str) {
         Ok(v) => Some(v),
         Err(e) => {
-            println!("Error reading serialized {} {:?}", filename, e);
+            error!("Error reading serialized {} {:?}", filename, e);
             None
         }
     })
@@ -97,7 +98,7 @@ fn set_settings(app: &tauri::AppHandle, filename: &str, settings: &str) {
     path::app_local_data_dir(&app.config())
         .and_then(|path| {
             if let Err(e) = fs::create_dir_all(&path) {
-                println!("Error creating settings dir {:?}", e);
+                error!("Error creating settings dir {:?}", e);
                 return None;
             }
             Some(path.join(filename))
@@ -105,7 +106,7 @@ fn set_settings(app: &tauri::AppHandle, filename: &str, settings: &str) {
         .map(|path| match fs::write(path.clone(), settings) {
             Ok(_) => (),
             Err(e) => {
-                println!("Error saving settings {:?} {:?}", path, e);
+                error!("Error saving settings {:?} {:?}", path, e);
                 ()
             }
         });
@@ -114,7 +115,7 @@ fn set_json_settings<T: Serialize>(app: &tauri::AppHandle, filename: &str, setti
     let json = match serde_json::to_string(&settings) {
         Ok(v) => Some(v),
         Err(e) => {
-            println!("Error serializing settings {} {:?}", filename, e);
+            error!("Error serializing settings {} {:?}", filename, e);
             None
         }
     };

@@ -86,7 +86,6 @@ pub fn unstage(path: String, delta: Option<Delta>) -> Result<(), StageError> {
 }
 
 fn reset_index_to_head(repo: &Repository, path: Option<&str>) -> Result<(), StageError> {
-    println!("reset_index_to_head");
     let mut index = repo.index()?;
     let head_result = repo.head().and_then(|head| head.peel_to_tree());
 
@@ -116,8 +115,6 @@ fn reset_index_to_head(repo: &Repository, path: Option<&str>) -> Result<(), Stag
             index.add_frombuffer(index_entry, blob.content())?;
             index.write()?;
         } else {
-            println!("index_entry: {:?}", index_entry);
-            println!("blob: {:?}", blob);
             return Err(StageError::UnstageError);
         }
     } else {
