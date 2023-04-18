@@ -133,11 +133,12 @@ fn get_tags(repo: &Repository) -> Result<Vec<(git2::Oid, String)>, git2::Error> 
     let mut tags = vec![];
 
     repo.tag_foreach(|id, u8| {
-        let ref_name = std::str::from_utf8(u8)
-            .ok()
-            .and_then(|ref_name| ref_name.splitn(3, "/").collect_tuple())
+        let ref_name = String::from_utf8_lossy(u8).to_string();
+        let split = ref_name
+            .splitn(3, "/")
+            .collect_tuple()
             .map(|(_, _, name)| name.to_owned());
-        if let Some(name) = ref_name {
+        if let Some(name) = split {
             tags.push((id, name));
         }
         true

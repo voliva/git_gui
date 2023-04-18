@@ -1,8 +1,4 @@
-use std::{
-    fs::File,
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use super::{
     get_file_blob,
@@ -101,11 +97,9 @@ fn reset_index_to_head(repo: &Repository, path: Option<&str>) -> Result<(), Stag
 
     if let Some(path) = path {
         // Reference https://stackoverflow.com/a/35093146/1026619
-        let index_entry = index.iter().find(|entry| {
-            std::str::from_utf8(&entry.path)
-                .map(|str| str.eq(path))
-                .unwrap_or(false)
-        });
+        let index_entry = index
+            .iter()
+            .find(|entry| String::from_utf8_lossy(&entry.path).to_string().eq(path));
 
         let tree_entry = head.get_path(&PathBuf::from(path))?;
         let obj = tree_entry.to_object(&repo)?;
@@ -290,7 +284,9 @@ pub fn stage_line(path: String, delta: Delta, change: LineChange) -> Result<(), 
     };
 
     let file = delta.change.get_oldest_file();
-    let blob = get_file_blob(&repo, &path, file).unwrap();
+    let blob = get_file_blob(&repo, &path, file)
+        .ok_or(StageError::Read("Couldn't read file blob".to_owned()))?;
+
     let data = blob
         .content()
         .split(|v| *v == '\n' as u8)
@@ -320,7 +316,9 @@ pub fn stage_line(path: String, delta: Delta, change: LineChange) -> Result<(), 
     // });
 
     let mut index = repo.index()?;
-    let entry = index.get_path(Path::new(&file.path), 0).unwrap();
+    let entry = index
+        .get_path(Path::new(&file.path), 0)
+        .ok_or(StageError::Read("Couldn't find index entry".to_owned()))?;
 
     index.add_frombuffer(&entry, &data[..])?;
     index.write()?;

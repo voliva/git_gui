@@ -30,7 +30,7 @@ impl<'a> From<git2::DiffFile<'a>> for File {
                 .path()
                 .and_then(|buf| buf.to_str())
                 .map(|x| x.to_owned())
-                .unwrap(),
+                .unwrap_or("".to_owned()),
         }
     }
 }

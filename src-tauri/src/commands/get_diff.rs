@@ -29,7 +29,7 @@ impl<'a> From<DiffHunk<'a>> for Hunk {
         Hunk {
             old_range: (hunk.old_start(), hunk.old_lines()),
             new_range: (hunk.new_start(), hunk.new_lines()),
-            header: std::str::from_utf8(hunk.header()).unwrap().to_owned(),
+            header: String::from_utf8_lossy(hunk.header()).to_string(),
         }
     }
 }
@@ -44,17 +44,12 @@ pub fn get_diff(path: String, delta: Delta) -> Result<DeltaDiff, GitError> {
     let old_blob = old_file.and_then(|file| get_file_blob(&repo, &path, &file));
     let new_blob = new_file.and_then(|file| get_file_blob(&repo, &path, &file));
 
-    let old_content = old_blob.as_ref().and_then(|blob| {
-        // TODO Case it's not utf_8? is it posible?
-        std::str::from_utf8(blob.content())
-            .ok()
-            .map(|v| v.to_owned())
-    });
-    let new_content = new_blob.as_ref().and_then(|blob| {
-        std::str::from_utf8(blob.content())
-            .ok()
-            .map(|v| v.to_owned())
-    });
+    let old_content = old_blob
+        .as_ref()
+        .map(|blob| String::from_utf8_lossy(blob.content()).to_string());
+    let new_content = new_blob
+        .as_ref()
+        .map(|blob| String::from_utf8_lossy(blob.content()).to_string());
 
     let mut hunks = vec![];
 

@@ -1,5 +1,6 @@
-use super::read_working_dir;
+use super::{read_working_dir, serializer::git_error::GitError};
 use crate::AppState;
+use log::error;
 use logging_timer::time;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{
@@ -12,16 +13,22 @@ use tauri::{State, Window};
 
 #[time]
 #[tauri::command(async)]
-pub fn watch_repo(path: String, state: State<AppState>, window: Window) {
+pub fn watch_repo(path: String, state: State<AppState>, window: Window) -> Result<(), GitError> {
     let (tx, rx) = channel();
     let (tx_end, rx_end) = channel();
     let needs_update = Arc::new(Mutex::new(false));
 
-    let mut watcher = RecommendedWatcher::new(tx, Config::default()).unwrap();
+    let mut watcher = RecommendedWatcher::new(tx, Config::default()).map_err(|err| {
+        error!("Notifier error: {:?}", err);
+        GitError::Wrapped("Couldn't initialize watcher".to_owned())
+    })?;
 
     watcher
         .watch(Path::new(&path), RecursiveMode::Recursive)
-        .unwrap();
+        .map_err(|err| {
+            error!("Watcher error: {:?}", err);
+            GitError::Wrapped("Couldn't initialize watcher".to_owned())
+        })?;
 
     let watcher_nu = needs_update.clone();
     let watcher_wnd = window.clone();
@@ -71,6 +78,8 @@ pub fn watch_repo(path: String, state: State<AppState>, window: Window) {
             Ok(())
         })
         .ok();
+
+    Ok(())
 }
 
 #[time]

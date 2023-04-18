@@ -5,6 +5,8 @@ use itertools::Itertools;
 use memoize::memoize;
 use serde::Serialize;
 
+use crate::commands::serializer::git_error::GitError;
+
 #[derive(Debug, Serialize)]
 pub struct SignatureInfo {
     pub name: Option<String>,
@@ -195,17 +197,15 @@ where
                             .unwrap_or(false)
                     })
                     .map(|(position, _)| position);
-                let position = existing
-                    .or_else(|| {
-                        let position = self
-                            .branches
-                            .iter()
-                            .find_position(|v| v.is_none())
-                            .map(|(pos, _)| pos)
-                            .unwrap_or(self.branches.len());
-                        Some(position)
-                    })
-                    .unwrap();
+                let position = existing.unwrap_or_else(|| {
+                    let position = self
+                        .branches
+                        .iter()
+                        .find_position(|v| v.is_none())
+                        .map(|(pos, _)| pos)
+                        .unwrap_or(self.branches.len());
+                    position
+                });
 
                 if position == self.branches.len() {
                     self.branches.push(Some(parent_id))
@@ -239,11 +239,10 @@ where
 
 pub fn get_positioned_commits<'a>(
     repo: &'a Repository,
-) -> impl Iterator<Item = PositionedCommit> + 'a {
-    get_revwalk(&repo)
-        .unwrap()
+) -> Result<impl Iterator<Item = PositionedCommit> + 'a, GitError> {
+    Ok(get_revwalk(&repo)?
         .filter_map(|oid| oid.ok().and_then(|oid| repo.find_commit(oid).ok()))
-        .position_commit()
+        .position_commit())
 }
 
 fn get_revwalk(repo: &Repository) -> Result<Revwalk, Error> {

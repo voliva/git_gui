@@ -17,7 +17,7 @@ pub fn get_commits(
     let repo = Repository::open(path)?;
 
     let response_channel = format!("get_commits-stream-{correlation_id}");
-    let result = get_positioned_commits(&repo)
+    let result = get_positioned_commits(&repo)?
         .enumerate()
         .map(|(i, x)| {
             window.emit(&response_channel, &x).ok();
