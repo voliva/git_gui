@@ -49,7 +49,7 @@ pub fn watch_repo(path: String, state: State<AppState>, window: Window) -> Resul
     });
 
     thread::spawn(move || loop {
-        thread::sleep(Duration::from_secs(1));
+        thread::sleep(Duration::from_millis(100));
         let needs_update = needs_update
             .lock()
             .map(|mut nu| {

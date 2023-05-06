@@ -31,7 +31,6 @@ pub struct AppState {
 
 fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
-    let mut app_state = AppState::default();
 
     let app = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -84,14 +83,16 @@ fn main() {
             }
             _ => {}
         })
-        .setup(move |_| {
+        .setup(|app| {
+            let mut app_state = AppState::default();
             app_state.port = launch_server();
+            println!("App set up {}", app_state.port);
+            app.manage(app_state);
 
             Ok(())
         })
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
-    app.manage(app_state);
 
     app.run(|_, _| {});
 }
