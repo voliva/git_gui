@@ -32,17 +32,33 @@ pub fn watch_repo(path: String, state: State<AppState>, window: Window) -> Resul
 
     let watcher_nu = needs_update.clone();
     let watcher_wnd = window.clone();
+    let watcher_path = path.clone();
     thread::spawn(move || {
+        let git_folder = Path::new(&watcher_path).join(".git");
+
         for msg in rx {
             if let Ok(event) = msg {
                 watcher_wnd.emit("watcher_notification", &event).ok();
-                watcher_nu
-                    .lock()
-                    .and_then(|mut nu| {
-                        *nu = true;
-                        Ok(())
-                    })
-                    .ok();
+
+                // Only notify working_directory changes if the change happens outside the .git folder
+                // Or if it happens on the HEAD (after commit) or index (after stage/unstage).
+                if event.paths.iter().any(|event_path| {
+                    let is_git_folder = event_path.starts_with(&git_folder);
+                    let path = event_path.to_str().unwrap_or("");
+                    return !is_git_folder
+                        || path.ends_with(".git\\logs\\HEAD")
+                        || path.ends_with(".git/logs/HEAD")
+                        || path.ends_with(".git\\index")
+                        || path.ends_with(".git/index");
+                }) {
+                    watcher_nu
+                        .lock()
+                        .and_then(|mut nu| {
+                            *nu = true;
+                            Ok(())
+                        })
+                        .ok();
+                }
             }
         }
         tx_end.send(()).ok();

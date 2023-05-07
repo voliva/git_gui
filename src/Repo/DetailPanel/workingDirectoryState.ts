@@ -10,11 +10,13 @@ export interface WorkingDirStatus {
   staged_deltas: Delta[];
 }
 
+export const workingDirectoryChange$ = listen$<WorkingDirStatus>(
+  "working-directory"
+).pipe(map((evt) => evt.payload));
+
 export const workingDirectory$ = state(
   merge(
-    listen$<WorkingDirStatus>("working-directory").pipe(
-      map((evt) => evt.payload)
-    ),
+    workingDirectoryChange$,
     repoPath$.pipe(
       switchMap((path) => invoke<WorkingDirStatus>("get_working_dir", { path }))
     )
