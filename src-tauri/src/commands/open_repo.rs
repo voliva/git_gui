@@ -21,7 +21,6 @@ impl From<git2::Error> for OpenRepoError {
 #[tauri::command(async)]
 pub fn open_repo(app: tauri::AppHandle) -> Result<String, OpenRepoError> {
     let (sx, rx) = mpsc::channel();
-    println!("Call dialog builder");
     FileDialogBuilder::new().pick_folder(move |path| sx.send(path).unwrap_or(()));
     let result = rx.recv();
 

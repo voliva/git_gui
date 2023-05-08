@@ -1,16 +1,20 @@
-import { isNotNullish } from "@/lib/rxState";
+import {
+  isNotNullish,
+  losslessExhaustMap,
+  losslessThrottle,
+} from "@/lib/rxState";
 import { listen$, streamCommand$ } from "@/lib/tauriRx";
 import { state } from "@react-rxjs/core";
 import { createSignal } from "@react-rxjs/utils";
 import { invoke } from "@tauri-apps/api";
 import {
+  EMPTY,
   catchError,
   concat,
   connect,
   debounceTime,
   defer,
   distinctUntilChanged,
-  EMPTY,
   exhaustMap,
   filter,
   finalize,
@@ -18,16 +22,13 @@ import {
   ignoreElements,
   map,
   merge,
-  Observable,
   scan,
   share,
   startWith,
-  Subscription,
   switchMap,
   take,
   timer,
   withLatestFrom,
-  type ObservableInput,
 } from "rxjs";
 
 export const [triggerOpen$, openRepo] = createSignal();
@@ -122,8 +123,7 @@ const shouldUpdateRepo$ = defer(() => repoEvents$).pipe(
         )
       )
     )
-  ),
-  take(1)
+  )
 );
 
 const commitEvent$ = repoPath$.pipe(
@@ -347,93 +347,3 @@ const repoEvents$ = repoPath$.pipe(
   }),
   share()
 );
-
-const empty = Symbol("empty");
-function losslessExhaustMap<T, R>(mapFn: (value: T) => ObservableInput<R>) {
-  return (source$: Observable<T>) =>
-    new Observable<R>((obs) => {
-      let innerSub: Subscription | null = null;
-      let missed: T | typeof empty = empty;
-      let outerComplete = false;
-
-      const subscribeInner = (value: T) => {
-        innerSub = from(mapFn(value)).subscribe({
-          next: (result) => obs.next(result),
-          error: (error) => obs.error(error),
-          complete: () => {
-            innerSub = null;
-            if (missed !== empty) {
-              const tmp = missed;
-              missed = empty;
-              subscribeInner(tmp);
-            } else if (outerComplete) {
-              obs.complete();
-            }
-          },
-        });
-      };
-
-      const outerSub = source$.subscribe({
-        next: (value) => {
-          if (!innerSub) {
-            subscribeInner(value);
-          } else {
-            missed = value;
-          }
-        },
-        error: (e) => obs.error(e),
-        complete: () => {
-          if (!innerSub) {
-            obs.complete();
-          } else {
-            outerComplete = true;
-          }
-        },
-      });
-
-      return () => {
-        innerSub?.unsubscribe();
-        outerSub.unsubscribe();
-      };
-    });
-}
-
-function losslessThrottle<T>(timeout: number) {
-  return (source$: Observable<T>) =>
-    new Observable<T>((obs) => {
-      let throttle: NodeJS.Timeout | null = null;
-      let missed: T | typeof empty = empty;
-
-      const emit = (value: T) => {
-        throttle = setTimeout(() => {
-          throttle = null;
-
-          if (missed !== empty) {
-            const tmp = missed;
-            missed = empty;
-            emit(tmp);
-          }
-        }, timeout);
-        obs.next(value);
-      };
-
-      const sub = source$.subscribe({
-        next: (v) => {
-          if (!throttle) {
-            emit(v);
-          } else {
-            missed = v;
-          }
-        },
-        error: (e) => obs.error(e),
-        complete: () => obs.complete,
-      });
-
-      return () => {
-        sub.unsubscribe();
-        if (throttle !== null) {
-          clearTimeout(throttle);
-        }
-      };
-    });
-}

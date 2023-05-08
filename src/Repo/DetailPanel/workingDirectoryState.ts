@@ -1,15 +1,7 @@
 import { listen$ } from "@/lib/tauriRx";
 import { state } from "@react-rxjs/core";
-import { createSignal } from "@react-rxjs/utils";
 import { invoke } from "@tauri-apps/api";
-import {
-  exhaustMap,
-  firstValueFrom,
-  map,
-  merge,
-  startWith,
-  switchMap,
-} from "rxjs";
+import { firstValueFrom, map, merge, switchMap } from "rxjs";
 import { repoPath$ } from "../repoState";
 import type { Delta } from "./activeCommitChangesState";
 
@@ -18,22 +10,15 @@ export interface WorkingDirStatus {
   staged_deltas: Delta[];
 }
 
-const [refresh$, refresh] = createSignal<void>();
+export const workingDirectoryChange$ = listen$<WorkingDirStatus>(
+  "working-directory"
+).pipe(map((evt) => evt.payload));
 
 export const workingDirectory$ = state(
   merge(
-    listen$<WorkingDirStatus>("working-directory").pipe(
-      map((evt) => evt.payload)
-    ),
+    workingDirectoryChange$,
     repoPath$.pipe(
-      switchMap((path) =>
-        refresh$.pipe(
-          startWith(null),
-          exhaustMap(() =>
-            invoke<WorkingDirStatus>("get_working_dir", { path })
-          )
-        )
-      )
+      switchMap((path) => invoke<WorkingDirStatus>("get_working_dir", { path }))
     )
   )
 );
@@ -41,10 +26,8 @@ export const workingDirectory$ = state(
 export async function stage(delta?: Delta) {
   const path = await firstValueFrom(repoPath$);
   await invoke("stage", { delta, path });
-  refresh();
 }
 export async function unstage(delta?: Delta) {
   const path = await firstValueFrom(repoPath$);
   await invoke("unstage", { delta, path });
-  refresh();
 }

@@ -96,3 +96,13 @@ export const getFileChangeFiles = (value: FileChange) =>
     Renamed: (files) => files,
     Modified: (files) => files,
   });
+
+export const isSameFile = (fileA: FileChange, fileB: FileChange) => {
+  const isSameType = Object.keys(fileA)[0] === Object.keys(fileB)[0];
+  if (!isSameType) return false;
+
+  const fileBFiles = getFileChangeFiles(fileB);
+  return getFileChangeFiles(fileA).every(
+    (f, i) => f?.path === fileBFiles[i]?.path
+  );
+};

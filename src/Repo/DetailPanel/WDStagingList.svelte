@@ -30,7 +30,7 @@
         {delta}
         on:click={() => {
           if (!delta.binary || delta.mime_type?.startsWith("image")) {
-            setDiffDelta(delta);
+            setDiffDelta({ delta, kind: checked ? "staged" : "unstaged" });
           }
         }}
       >

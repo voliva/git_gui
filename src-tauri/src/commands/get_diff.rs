@@ -6,9 +6,9 @@ use std::{
 use crate::commands::serializer::delta::{Delta, File};
 use git2::{Blob, DiffHunk, DiffOptions, Oid, Repository};
 use logging_timer::time;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-use super::serializer::{delta::FileChange, git_error::GitError};
+use super::serializer::git_error::GitError;
 
 #[derive(Serialize)]
 pub struct DeltaDiff {
@@ -17,11 +17,11 @@ pub struct DeltaDiff {
     hunks: Vec<Hunk>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Hunk {
-    old_range: (u32, u32),
-    new_range: (u32, u32),
-    header: String,
+    pub old_range: (u32, u32),
+    pub new_range: (u32, u32),
+    pub header: String,
 }
 
 impl<'a> From<DiffHunk<'a>> for Hunk {
@@ -29,7 +29,7 @@ impl<'a> From<DiffHunk<'a>> for Hunk {
         Hunk {
             old_range: (hunk.old_start(), hunk.old_lines()),
             new_range: (hunk.new_start(), hunk.new_lines()),
-            header: std::str::from_utf8(hunk.header()).unwrap().to_owned(),
+            header: String::from_utf8_lossy(hunk.header()).to_string(),
         }
     }
 }
@@ -39,29 +39,17 @@ impl<'a> From<DiffHunk<'a>> for Hunk {
 pub fn get_diff(path: String, delta: Delta) -> Result<DeltaDiff, GitError> {
     let repo = Repository::open(path.clone())?;
 
-    let (old_file, new_file) = match delta.change {
-        FileChange::Added(new) => (None, Some(new)),
-        FileChange::Untracked(new) => (None, Some(new)),
-        FileChange::Copied(old, new) => (Some(old), Some(new)),
-        FileChange::Deleted(old) => (Some(old), None),
-        FileChange::Renamed(old, new) => (Some(old), Some(new)),
-        FileChange::Modified(old, new) => (Some(old), Some(new)),
-    };
+    let (old_file, new_file) = delta.change.get_files();
 
     let old_blob = old_file.and_then(|file| get_file_blob(&repo, &path, &file));
     let new_blob = new_file.and_then(|file| get_file_blob(&repo, &path, &file));
 
-    let old_content = old_blob.as_ref().and_then(|blob| {
-        // TODO Case it's not utf_8? is it posible?
-        std::str::from_utf8(blob.content())
-            .ok()
-            .map(|v| v.to_owned())
-    });
-    let new_content = new_blob.as_ref().and_then(|blob| {
-        std::str::from_utf8(blob.content())
-            .ok()
-            .map(|v| v.to_owned())
-    });
+    let old_content = old_blob
+        .as_ref()
+        .map(|blob| String::from_utf8_lossy(blob.content()).to_string());
+    let new_content = new_blob
+        .as_ref()
+        .map(|blob| String::from_utf8_lossy(blob.content()).to_string());
 
     let mut hunks = vec![];
 
@@ -92,7 +80,7 @@ pub fn get_diff(path: String, delta: Delta) -> Result<DeltaDiff, GitError> {
     })
 }
 
-fn get_file_blob<'a>(repo: &'a Repository, path: &str, file: &File) -> Option<Blob<'a>> {
+pub fn get_file_blob<'a>(repo: &'a Repository, path: &str, file: &File) -> Option<Blob<'a>> {
     let path = Path::new(path);
 
     Oid::from_str(&file.id).ok().and_then(|oid| {

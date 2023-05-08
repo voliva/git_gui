@@ -1,4 +1,5 @@
 use git2::{Repository, StatusOptions};
+use log::error;
 use logging_timer::time;
 use serde::Serialize;
 
@@ -67,10 +68,16 @@ pub fn read_working_dir(path: &str) -> Result<WorkingDirStatus, git2::Error> {
     let statuses = repo.statuses(Some(&mut options))?;
     statuses.iter().for_each(|s| {
         if let Some(diff) = s.head_to_index() {
-            status.staged_deltas.push(diff.try_into().unwrap());
+            match Delta::try_from(diff) {
+                Ok(delta) => status.staged_deltas.push(delta),
+                Err(err) => error!("Error loading staged delta: {:?}", err),
+            }
         }
         if let Some(diff) = s.index_to_workdir() {
-            status.unstaged_deltas.push(diff.try_into().unwrap());
+            match Delta::try_from(diff) {
+                Ok(delta) => status.unstaged_deltas.push(delta),
+                Err(err) => error!("Error loading unstaged delta: {:?}", err),
+            }
         }
     });
 

@@ -1,4 +1,4 @@
-import { state } from "@react-rxjs/core";
+import { state, withDefault } from "@react-rxjs/core";
 import { createSignal, mergeWithKey } from "@react-rxjs/utils";
 import { invoke } from "@tauri-apps/api";
 import {
@@ -6,6 +6,8 @@ import {
   distinctUntilChanged,
   from,
   map,
+  of,
+  pairwise,
   scan,
   shareReplay,
   startWith,
@@ -15,8 +17,11 @@ import {
 } from "rxjs";
 import {
   getFileChangeFiles,
+  isSameFile,
   type Delta,
 } from "../DetailPanel/activeCommitChangesState";
+import type { WorkingDirStatus } from "../DetailPanel/workingDirectoryState";
+import { workingDirectory$ } from "../DetailPanel/workingDirectoryState";
 import { repoPath$ } from "../repoState";
 
 export enum Side {
@@ -77,10 +82,87 @@ export const diffViewSettings$ = state(
   )
 );
 
-export const [diffDeltaChange$, setDiffDelta] = createSignal<Delta | null>();
-export const selectedDelta$ = state(
-  diffDeltaChange$.pipe(distinctUntilChanged()),
-  null
+type SelectedDeltaWithKind = {
+  kind: "commit" | "staged" | "unstaged";
+  delta: Delta;
+};
+export const [diffDeltaChange$, setDiffDelta] =
+  createSignal<SelectedDeltaWithKind | null>();
+const selectedDeltaWithKind$ = state(
+  diffDeltaChange$.pipe(
+    switchMap((change) => {
+      if (!change || change.kind === "commit") {
+        return of(change);
+      }
+      let currentSelection = change;
+
+      function selectNextDelta(
+        previous: WorkingDirStatus,
+        newWorkingDir: WorkingDirStatus,
+        mainSource: keyof WorkingDirStatus,
+        backupSource: null | keyof WorkingDirStatus
+      ): SelectedDeltaWithKind | null {
+        const sameFile = newWorkingDir[mainSource].find((delta) =>
+          isSameFile(delta.change, currentSelection.delta.change)
+        );
+        if (sameFile) {
+          currentSelection = {
+            kind: mainSource === "staged_deltas" ? "staged" : "unstaged",
+            delta: sameFile,
+          };
+          return currentSelection;
+        }
+        // Doesn't exist, grab next one by index
+        const prevIndex = previous[mainSource].findIndex((delta) =>
+          isSameFile(delta.change, currentSelection.delta.change)
+        );
+        const idx = Math.min(prevIndex, newWorkingDir[mainSource].length - 1);
+        if (idx < 0) {
+          if (backupSource) {
+            // Try grab from other side
+            return selectNextDelta(previous, newWorkingDir, backupSource, null);
+          }
+          return null;
+        }
+        currentSelection = {
+          kind: mainSource === "staged_deltas" ? "staged" : "unstaged",
+          delta: newWorkingDir[mainSource][idx],
+        };
+        return currentSelection;
+      }
+
+      return workingDirectory$.pipe(
+        pairwise(),
+        map(([previous, newWorkingDir]) => {
+          console.log("emitted", previous, newWorkingDir);
+          const mainSource: keyof WorkingDirStatus =
+            currentSelection.kind == "staged"
+              ? "staged_deltas"
+              : "unstaged_deltas";
+          const backupSource: keyof WorkingDirStatus =
+            currentSelection.kind == "staged"
+              ? "unstaged_deltas"
+              : "staged_deltas";
+          return selectNextDelta(
+            previous,
+            newWorkingDir,
+            mainSource,
+            backupSource
+          );
+        }),
+        startWith(change)
+      );
+    })
+  )
+);
+export const selectedDelta$ = selectedDeltaWithKind$.pipeState(
+  map((v) => v?.delta ?? null),
+  distinctUntilChanged(),
+  withDefault(null)
+);
+export const selectedDeltaKind$ = selectedDeltaWithKind$.pipeState(
+  map((v) => v?.kind ?? null),
+  withDefault(null)
 );
 
 export const diffDelta$ = selectedDelta$.pipeState(

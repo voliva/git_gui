@@ -41,13 +41,16 @@ pub fn checkout_local(path: String, branch_name: String) -> Result<(), GitError>
     let reference = branch.into_reference();
 
     let tree = reference.peel_to_tree()?;
+    let name = reference.name().ok_or(GitError::Wrapped(
+        "Reference doesn't have a name".to_owned(),
+    ))?;
 
     let mut opts = CheckoutBuilder::new();
     opts.safe();
 
     // first tree, then move HEAD https://stackoverflow.com/questions/56885218/libgit2-git-checkout-head-with-git-checkout-safe-do-nothing-with-working-dir
     repo.checkout_tree(tree.as_object(), Some(&mut opts))?;
-    repo.set_head(reference.name().unwrap())?;
+    repo.set_head(name)?;
 
     Ok(())
 }

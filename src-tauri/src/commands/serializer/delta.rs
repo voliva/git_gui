@@ -1,4 +1,5 @@
 use git2::Oid;
+use log::{error, warn};
 use rocket::http::ContentType;
 use serde::{Deserialize, Serialize};
 
@@ -29,7 +30,7 @@ impl<'a> From<git2::DiffFile<'a>> for File {
                 .path()
                 .and_then(|buf| buf.to_str())
                 .map(|x| x.to_owned())
-                .unwrap(),
+                .unwrap_or("".to_owned()),
         }
     }
 }
@@ -45,16 +46,35 @@ pub enum FileChange {
 }
 
 impl FileChange {
-    fn get_newest_file(&self) -> File {
-        let file = match self {
+    pub fn get_newest_file(&self) -> &File {
+        match self {
             FileChange::Added(f) => f,
             FileChange::Untracked(f) => f,
             FileChange::Copied(_, f) => f,
             FileChange::Deleted(f) => f,
             FileChange::Renamed(_, f) => f,
             FileChange::Modified(_, f) => f,
-        };
-        file.clone()
+        }
+    }
+    pub fn get_oldest_file(&self) -> &File {
+        match self {
+            FileChange::Added(f) => f,
+            FileChange::Untracked(f) => f,
+            FileChange::Copied(f, _) => f,
+            FileChange::Deleted(f) => f,
+            FileChange::Renamed(f, _) => f,
+            FileChange::Modified(f, _) => f,
+        }
+    }
+    pub fn get_files(&self) -> (Option<&File>, Option<&File>) {
+        match self {
+            FileChange::Added(new) => (None, Some(new)),
+            FileChange::Untracked(new) => (None, Some(new)),
+            FileChange::Copied(old, new) => (Some(old), Some(new)),
+            FileChange::Deleted(old) => (Some(old), None),
+            FileChange::Renamed(old, new) => (Some(old), Some(new)),
+            FileChange::Modified(old, new) => (Some(old), Some(new)),
+        }
     }
 }
 
@@ -72,7 +92,7 @@ impl<'a> TryFrom<git2::DiffDelta<'a>> for Delta {
         let change = match value.status() {
             git2::Delta::Added => FileChange::Added(value.new_file().into()),
             git2::Delta::Copied => {
-                println!("Copied!!!"); // I couldn't see any instance of this happening?
+                warn!("Copied!!!"); // I couldn't see any instance of this happening?
                 FileChange::Copied(value.old_file().into(), value.new_file().into())
             }
             git2::Delta::Deleted => FileChange::Deleted(value.old_file().into()),
@@ -84,13 +104,13 @@ impl<'a> TryFrom<git2::DiffDelta<'a>> for Delta {
             }
             git2::Delta::Untracked => FileChange::Untracked(value.new_file().into()),
             v => {
-                println!("unsupported delta type {:?}", v);
+                error!("unsupported delta type {:?}", v);
                 return Err(DeltaReadError::UnsupportedDeltaType);
             }
         };
         let binary = value.flags().is_binary();
 
-        let path = change.get_newest_file().path;
+        let path = change.get_newest_file().path.clone();
         let last_point = path.len() - path.chars().rev().take_while(|x| x != &'.').count();
         let extension = if last_point > 0 {
             Some(&path[last_point..])
@@ -100,7 +120,6 @@ impl<'a> TryFrom<git2::DiffDelta<'a>> for Delta {
         let mime_type = extension
             .and_then(|ext| ContentType::from_extension(ext))
             .map(|content_type| content_type.to_string());
-        println!("Extension {:?} mime_type {:?}", extension, mime_type);
 
         Ok(Delta {
             change,

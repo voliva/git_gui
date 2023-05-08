@@ -1,5 +1,6 @@
 use crate::commands::serializer::delta::Delta;
 use git2::{Oid, Repository};
+use log::error;
 use logging_timer::time;
 use serde::Serialize;
 
@@ -30,6 +31,23 @@ pub fn get_commit(path: String, id: String) -> Result<CommitContents, GitError> 
     Ok(CommitContents {
         insertions: stats.insertions(),
         deletions: stats.deletions(),
-        deltas: diff.deltas().map(|d| d.try_into().unwrap()).collect(),
+        deltas: diff
+            .deltas()
+            .filter_map(|d| {
+                let old_file = d.old_file().path().map(|x| x.to_owned());
+                let new_file = d.old_file().path().map(|x| x.to_owned());
+
+                match Delta::try_from(d) {
+                    Ok(delta) => Some(delta),
+                    Err(err) => {
+                        error!(
+                            "Error mapping delta {:?} -> {:?}: {:?}",
+                            old_file, new_file, err
+                        );
+                        None
+                    }
+                }
+            })
+            .collect(),
     })
 }
