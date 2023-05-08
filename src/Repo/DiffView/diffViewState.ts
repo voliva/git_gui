@@ -48,7 +48,7 @@ export interface DeltaDiff {
 interface DiffSettings {
   hunk_or_file: "Hunk" | "File";
   split_or_unified: "Split" | "Unified";
-  image_mode: "SideBySide" | "Slide" | "Opacity";
+  image_mode: "SideBySide" | "Slide" | "Opacity" | "Linked";
 }
 export const [changeHunkOrFile$, changeHunkOrFile] =
   createSignal<DiffSettings["hunk_or_file"]>();

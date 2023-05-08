@@ -27,6 +27,7 @@ pub enum SplitOrUnified {
 #[derive(Serialize, Deserialize)]
 pub enum ImageMode {
     SideBySide,
+    Linked,
     Slide,
     Opacity,
 }

@@ -11,6 +11,7 @@
   import ImageSideBySide from "./ImageSideBySide.svelte";
   import ImageDiffOpacity from "./ImageDiffOpacity.svelte";
   import ImageSingleView from "./ImageSingleView.svelte";
+  import ImageLinkedDiff from "./ImageLinkedDiff.svelte";
 
   $: view = $diffViewSettings$?.image_mode;
   $: isSingle = !($deltaPaths$?.new && $deltaPaths$.old);
@@ -25,6 +26,12 @@
           class={classNames({
             active: view === "SideBySide",
           })}>Side by side</button
+        >
+        <button
+          on:click={() => changeImageDiffMode("Linked")}
+          class={classNames({
+            active: view === "Linked",
+          })}>Linked</button
         >
         <button
           on:click={() => changeImageDiffMode("Slide")}
@@ -50,6 +57,8 @@
     <ImageOverlayDiff />
   {:else if view === "Opacity"}
     <ImageDiffOpacity />
+  {:else if view === "Linked"}
+    <ImageLinkedDiff />
   {/if}
 </div>
 
