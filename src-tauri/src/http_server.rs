@@ -1,3 +1,4 @@
+use image::imageops::{resize, FilterType};
 use log::error;
 use logging_timer::time;
 use mime_sniffer::MimeTypeSniffer;
@@ -8,6 +9,7 @@ use tauri::State;
 
 extern crate rocket;
 
+use image::GenericImageView;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::{ContentType, Header};
 use rocket::{Request, Response};
@@ -37,11 +39,13 @@ impl Fairing for CORS {
     }
 }
 
-#[rocket::get("/raw/<path>/<id>?<file>")]
+#[time]
+#[rocket::get("/raw/<path>/<id>?<file>&<zoom_scale>")]
 fn get_raw_file(
     path: &str,
     id: &str,
     file: Option<&str>,
+    zoom_scale: Option<&str>,
 ) -> Result<(rocket::http::ContentType, Vec<u8>), GitError> {
     // first
     let repo = git2::Repository::open(path);
@@ -78,6 +82,20 @@ fn get_raw_file(
         .sniff_mime_type()
         .and_then(|mime_type| rocket::http::ContentType::from_str(mime_type).ok())
         .unwrap_or(ContentType::Any);
+
+    println!("len: {}, zoom scale: {:?}", content.len(), zoom_scale);
+    image::load_from_memory(content)
+        .map(|img| {
+            let (width, height) = img.dimensions();
+            let zoom_out_scale = (3840.0 / (width as f32)).min(2160 / (height as f32)).min(1.0);
+
+            let resized = resize(&img, (width as f32 * zoom_out_scale) as u32, (height as f32 * zoom_out_scale) as u32, FilterType::Gaussian);
+
+            resized.write_to(writer, format)
+
+            return true;
+        })
+        .unwrap_or(true);
 
     Ok((content_type, content.into()))
 }

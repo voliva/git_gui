@@ -28,6 +28,7 @@ port_check = "0.1.5"
 rocket = "=0.5.0-rc.3"
 mime-sniffer = "0.1.2"
 log = "0.4.17"
+image = "0.24.6"
 
 [features]
 # by default Tauri runs in production mode
