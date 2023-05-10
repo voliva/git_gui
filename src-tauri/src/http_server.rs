@@ -87,11 +87,19 @@ fn get_raw_file(
     image::load_from_memory(content)
         .map(|img| {
             let (width, height) = img.dimensions();
-            let zoom_out_scale = (3840.0 / (width as f32)).min(2160 / (height as f32)).min(1.0);
+            let zoom_out_scale = (3840.0 / (width as f32))
+                .min(2160 / (height as f32))
+                .min(1.0);
 
-            let resized = resize(&img, (width as f32 * zoom_out_scale) as u32, (height as f32 * zoom_out_scale) as u32, FilterType::Gaussian);
+            let resized = resize(
+                &img,
+                (width as f32 * zoom_out_scale) as u32,
+                (height as f32 * zoom_out_scale) as u32,
+                FilterType::Gaussian,
+            );
 
-            resized.write_to(writer, format)
+            let mut bytes: Vec<u8> = Vec::new();
+            resized.write_to(&mut Cursor::new(&mut bytes), img.format());
 
             return true;
         })
