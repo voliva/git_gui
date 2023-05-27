@@ -10,6 +10,7 @@
     selectedDelta$,
     setDiffDelta,
     type DeltaDiff,
+    Side,
   } from "./diffViewState";
   import {
     getFileChangeFiles,
@@ -74,7 +75,11 @@
   </div>
   <div class="monaco-container">
     {#each $highlightedDelta$?.hunks ?? [] as hunk}
-      <DiffViewHunkContent highlightedDelta={$highlightedDelta$} {hunk} />
+      <DiffViewHunkContent
+        highlightedDelta={$highlightedDelta$}
+        {hunk}
+        side={Side.NewFile}
+      />
     {/each}
   </div>
 </div>

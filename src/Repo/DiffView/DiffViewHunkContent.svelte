@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { Side, type DeltaDiff, type Hunk } from "./diffViewState";
+  import {
+    Side,
+    type DeltaDiff,
+    type Hunk,
+    type Change,
+  } from "./diffViewState";
 
   export let highlightedDelta: DeltaDiff;
   export let hunk: Hunk;
@@ -9,6 +14,7 @@
     number: [number | null, number | null];
     type: "add" | "remove" | "pad" | null;
     content: string | null;
+    height?: number;
   }
 
   // TODO the component must be something that just takes this array of lines
@@ -60,7 +66,74 @@
         }
       }
     } else {
+      let changeIdx = 0;
+      const getLineNum = () => (side === Side.NewFile ? newNum : oldNum);
+      const lineEnd = side === Side.NewFile ? newEnd : oldEnd;
+
+      const getContiguousChanges = () => {
+        let oldNumTemp = oldNum;
+        let newNumTemp = newNum;
+        let changeIdxTemp = changeIdx;
+        const getNum = (side: Side) =>
+          side === Side.OldFile ? oldNumTemp : newNumTemp;
+        const oldChanges: Change[] = [];
+        const newChanges: Change[] = [];
+        let change: Change;
+        while (
+          (change = hunk.changes[changeIdxTemp]) &&
+          getNum(change.side) === change.line_num
+        ) {
+          if (change.side === Side.NewFile) {
+            newChanges.push(change);
+            newNumTemp++;
+          } else {
+            oldChanges.push(change);
+            oldNumTemp++;
+          }
+          changeIdxTemp++;
+        }
+        return [oldChanges, newChanges];
+      };
+
+      while (getLineNum() < lineEnd) {
+        const [oldChanges, newChanges] = getContiguousChanges();
+        const totalChanges = oldChanges.length + newChanges.length;
+        if (totalChanges) {
+          console.log(oldChanges, newChanges);
+          const sideChanges = side === Side.OldFile ? oldChanges : newChanges;
+          const padding =
+            Math.max(oldChanges.length, newChanges.length) - sideChanges.length;
+          sideChanges.forEach((change) => {
+            lines.push({
+              content: getLines(change.side)[change.line_num - 1],
+              number: [change.line_num, change.line_num], // A bit of a hack, we will only show the relevant value
+              type: change.change_type == "+" ? "add" : "remove",
+            });
+          });
+          if (padding) {
+            lines.push({
+              content: null,
+              number: [null, null],
+              type: "pad",
+              height: padding,
+            });
+          }
+          changeIdx += totalChanges;
+          oldNum += oldChanges.length;
+          newNum += newChanges.length;
+        } else {
+          // Line unchanged - push and increment both (we need to keep track of the other side)
+          lines.push({
+            content: newLines[newNum - 1],
+            number: [oldNum, newNum],
+            type: null,
+          });
+          newNum++;
+          oldNum++;
+        }
+      }
     }
+    console.log(lines);
   }
 
   function getLineTypeSymbol(type: Line["type"]) {
@@ -76,31 +149,38 @@
 
 <hr />
 <div class="hunk-content">
-  <div class="line-nums">
-    {#each lines as line}
-      <div
-        class:added={line.type === "add"}
-        class:removed={line.type === "remove"}
-      >
-        {line.number[0] ?? " "}
-      </div>
-    {/each}
-  </div>
-  <div class="line-nums">
-    {#each lines as line}
-      <div
-        class:added={line.type === "add"}
-        class:removed={line.type === "remove"}
-      >
-        {line.number[1] ?? " "}
-      </div>
-    {/each}
-  </div>
+  {#if side == null || side == Side.OldFile}
+    <div class="line-nums">
+      {#each lines as line}
+        <div
+          class:added={line.type === "add"}
+          class:removed={line.type === "remove"}
+          style:height={(line.height ?? 1) + "lh"}
+        >
+          {line.number[0] ?? " "}
+        </div>
+      {/each}
+    </div>
+  {/if}
+  {#if side == null || side == Side.NewFile}
+    <div class="line-nums">
+      {#each lines as line}
+        <div
+          class:added={line.type === "add"}
+          class:removed={line.type === "remove"}
+          style:height={(line.height ?? 1) + "lh"}
+        >
+          {line.number[1] ?? " "}
+        </div>
+      {/each}
+    </div>
+  {/if}
   <div class="change">
     {#each lines as line}
       <div
         class:added={line.type === "add"}
         class:removed={line.type === "remove"}
+        style:height={(line.height ?? 1) + "lh"}
       >
         {getLineTypeSymbol(line.type)}
       </div>
@@ -109,8 +189,10 @@
   <pre><code
       >{#each lines as line}<div
           class:added={line.type === "add"}
-          class:removed={line.type === "remove"}>{@html line.content ||
-            " "}</div>{/each}</code
+          class:removed={line.type === "remove"}
+          class:pad={line.type === "pad"}
+          style:height={(line.height ?? 1) + "lh"}>{@html line.content ||
+            (line.type === "pad" ? "" : " ")}</div>{/each}</code
     ></pre>
 </div>
 <hr />
@@ -135,6 +217,19 @@
   }
   code > div {
     padding: 0 0.5rem;
+  }
+  .pad {
+    background-image: linear-gradient(
+      45deg,
+      rgba(204, 204, 204, 0.2) 12.5%,
+      #0000 12.5%,
+      #0000 50%,
+      rgba(204, 204, 204, 0.2) 50%,
+      rgba(204, 204, 204, 0.2) 62.5%,
+      #0000 62.5%,
+      #0000 100%
+    );
+    background-size: 10px 10px;
   }
   .added {
     background-color: #2a4025;
