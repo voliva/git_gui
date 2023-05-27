@@ -10,14 +10,14 @@
     selectedDelta$,
     setDiffDelta,
     type DeltaDiff,
-    Side,
   } from "./diffViewState";
   import {
     getFileChangeFiles,
     type File,
   } from "../DetailPanel/activeCommitChangesState";
   import { highlightSyntax } from "./highlightSyntax";
-  import DiffViewHunkContent from "./DiffViewHunkContent.svelte";
+  import DiffViewUnified from "./DiffViewUnified.svelte";
+  import DiffViewSplit from "./DiffViewSplit.svelte";
 
   const highlightedDelta$ = diffDelta$.pipeState(
     filter((delta) => !!delta),
@@ -74,13 +74,13 @@
     <button on:click={() => setDiffDelta(null)}>Close</button>
   </div>
   <div class="monaco-container">
-    {#each $highlightedDelta$?.hunks ?? [] as hunk}
-      <DiffViewHunkContent
-        highlightedDelta={$highlightedDelta$}
-        {hunk}
-        side={Side.NewFile}
-      />
-    {/each}
+    {#if $highlightedDelta$}
+      {#if $diffViewSettings$?.split_or_unified == "Unified"}
+        <DiffViewUnified highlightedDelta={$highlightedDelta$} />
+      {:else}
+        <DiffViewSplit highlightedDelta={$highlightedDelta$} />
+      {/if}
+    {/if}
   </div>
 </div>
 
