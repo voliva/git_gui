@@ -73,7 +73,7 @@
     </ButtonGroup>
     <button on:click={() => setDiffDelta(null)}>Close</button>
   </div>
-  <div class="monaco-container">
+  <div class="diff-container">
     {#if $highlightedDelta$}
       {#if $diffViewSettings$?.split_or_unified == "Unified"}
         <DiffViewUnified highlightedDelta={$highlightedDelta$} />
@@ -95,7 +95,7 @@
     text-align: right;
   }
 
-  .monaco-container {
+  .diff-container {
     flex: 1 1 auto;
     overflow: auto;
     max-width: 80vw;
@@ -118,29 +118,5 @@
     -moz-hyphens: none;
     -ms-hyphens: none;
     hyphens: none;
-  }
-
-  :global(.view-zones) {
-    /* So deleted lines overlays are physically above regular lines */
-    z-index: 1;
-  }
-  :global(
-      .monaco-editor.no-user-select .lines-content,
-      .monaco-editor.no-user-select .view-line,
-      .monaco-editor.no-user-select .view-lines
-    ) {
-    /* So deleted lines can be selected */
-    user-select: auto;
-  }
-  :global(.line-numbers) {
-    /* So line numbers won't be selected when starting selection from deleted */
-    user-select: none;
-  }
-  :global(.monaco-editor .line-delete .view-line) {
-    /* So Ctrl+C keeps new lines */
-    position: static;
-  }
-  :global(.monaco-editor .squiggly-hint) {
-    display: none;
   }
 </style>
