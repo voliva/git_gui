@@ -38,6 +38,7 @@ export interface Hunk {
   old_range: [number, number];
   new_range: [number, number];
   header: string;
+  changes: Change[];
 }
 export interface DeltaDiff {
   old_file?: string;

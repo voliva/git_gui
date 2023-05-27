@@ -1,6 +1,7 @@
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import { defineConfig } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { prismjsPlugin } from "vite-plugin-prismjs";
 import sveltePreprocess from "svelte-preprocess";
 import eslint from "vite-plugin-eslint";
 import * as path from "path";
@@ -19,6 +20,26 @@ export default defineConfig(async () => ({
     eslint({
       failOnWarning: !process.env.TAURI_DEBUG,
       failOnError: !process.env.TAURI_DEBUG,
+    }),
+    prismjsPlugin({
+      languages: [
+        // My personal pick :)
+        "typescript",
+        "tsx",
+        "jsx",
+        "rust",
+        "gherkin",
+        // Other popular, based on a post from analyticsinsight
+        "python",
+        "java",
+        "c",
+        "cpp",
+        "php",
+        "csharp",
+        "swift",
+        "kotlin",
+        "go",
+      ],
     }),
   ],
   resolve: {

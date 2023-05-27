@@ -1,18 +1,7 @@
 <script lang="ts">
-  import * as monaco from "monaco-editor";
-  import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
-  import CssWorker from "monaco-editor/esm/vs/language/css/css.worker?worker";
-  import HtmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
-  import JsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
-  import TsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
-  import { onDestroy, onMount } from "svelte";
-  import type { File } from "../DetailPanel/activeCommitChangesState";
-  import { getFileChangeFiles } from "../DetailPanel/activeCommitChangesState";
-  import {
-    getHiddenRanges,
-    setHiddenAreas,
-    viewZoneSetter,
-  } from "./diffViewHunks";
+  import ButtonGroup from "@/components/ButtonGroup.svelte";
+  import classNames from "classnames";
+  import { filter, map, withLatestFrom } from "rxjs";
   import {
     changeHunkOrFile,
     changeSplitOrUnified,
@@ -20,165 +9,35 @@
     diffViewSettings$,
     selectedDelta$,
     setDiffDelta,
-    selectedDeltaKind$,
-    type Hunk,
+    type DeltaDiff,
   } from "./diffViewState";
-  import ButtonGroup from "@/components/ButtonGroup.svelte";
-  import classNames from "classnames";
-  import { firstValueFrom } from "rxjs";
-  import { repoPath$ } from "../repoState";
-  import { invoke } from "@tauri-apps/api";
+  import {
+    getFileChangeFiles,
+    type File,
+  } from "../DetailPanel/activeCommitChangesState";
+  import { highlightSyntax } from "./highlightSyntax";
+  import DiffViewHunkContent from "./DiffViewHunkContent.svelte";
 
-  self.MonacoEnvironment = {
-    getWorker: function (_, label) {
-      if (label === "typescript" || label === "javascript")
-        return new TsWorker();
-      if (label === "json") return new JsonWorker();
-      if (label === "css") return new CssWorker();
-      if (label === "html") return new HtmlWorker();
-      return new EditorWorker();
-    },
-  };
+  const highlightedDelta$ = diffDelta$.pipeState(
+    filter((delta) => !!delta),
+    withLatestFrom(
+      selectedDelta$.pipe(map((v) => (v ? getFileChangeFiles(v.change) : [])))
+    ),
+    map(([result, fileChanges]): DeltaDiff => {
+      const highlight = (src: string | undefined, file: File | null) => {
+        if (!src) return "";
+        const extension =
+          file?.path.slice(file.path.lastIndexOf(".") + 1) ?? "";
+        return highlightSyntax(src, extension);
+      };
 
-  let container: HTMLDivElement | undefined = undefined;
-
-  let editor: monaco.editor.IStandaloneDiffEditor;
-  onMount(() => {
-    editor = monaco.editor.createDiffEditor(container!, {
-      theme: "vs-dark",
-      renderSideBySide: true,
-      enableSplitViewResizing: true,
-      scrollBeyondLastLine: false,
-      readOnly: true,
-      domReadOnly: true,
-      automaticLayout: true,
-      showDeprecated: false,
-      showUnused: false,
-      // In an attempt to hide all hints...
-      inlayHints: { enabled: "off" },
-      parameterHints: { enabled: false },
-      codeLens: false,
-      quickSuggestions: false,
-      inlineSuggest: {
-        enabled: false,
-      },
-      lightbulb: {
-        enabled: false,
-      },
-      contextmenu: false,
-      // Ended up through css .monaco-editor .squiggly-hint
-    });
-  });
-
-  $: {
-    editor?.updateOptions({
-      renderSideBySide: $diffViewSettings$?.split_or_unified === "Split",
-    });
-  }
-  $: {
-    if ($diffDelta$ && editor && $selectedDelta$) {
-      const [old_file, new_file] = getFileChangeFiles($selectedDelta$.change);
-
-      monaco.editor.getModels().forEach((model) => model.dispose());
-      editor.setModel({
-        original: monaco.editor.createModel(
-          $diffDelta$.old_file ?? "",
-          undefined,
-          getFileUri(old_file, "old")
-        ),
-        modified: monaco.editor.createModel(
-          $diffDelta$.new_file ?? "",
-          undefined,
-          getFileUri(new_file, "new")
-        ),
-      });
-    }
-  }
-
-  let cleanupPreviousViewzones = () => {};
-  onDestroy(cleanupPreviousViewzones);
-  $: {
-    if ($diffDelta$ && editor) {
-      const originalEditor = editor.getOriginalEditor();
-      const modifiedEditor = editor.getModifiedEditor();
-
-      if ($diffViewSettings$.hunk_or_file === "Hunk") {
-        const hunks = $diffDelta$.hunks;
-
-        const originalHiddenRanges = getHiddenRanges(
-          hunks.map((h) => h.old_range),
-          originalEditor.getModel()!.getLineCount()
-        );
-        const modifiedHiddenRanges = getHiddenRanges(
-          hunks.map((h) => h.new_range),
-          modifiedEditor.getModel()!.getLineCount()
-        );
-
-        setHiddenAreas(originalEditor, originalHiddenRanges);
-        setHiddenAreas(modifiedEditor, modifiedHiddenRanges);
-
-        cleanupPreviousViewzones();
-        const [originalVZ, cleanupOriginalVZ] = viewZoneSetter(
-          hunks.map((h) => ({
-            header: h.header,
-            range: h.old_range,
-            original: h,
-          })),
-          populateHunkContent
-        );
-        const [modifiedVZ, cleanupModifiedVZ] = viewZoneSetter(
-          hunks.map((h) => ({
-            header: h.header,
-            range: h.new_range,
-            original: h,
-          })),
-          populateHunkContent
-        );
-        originalEditor.changeViewZones(originalVZ);
-        modifiedEditor.changeViewZones(modifiedVZ);
-        cleanupPreviousViewzones = () => {
-          originalEditor.changeViewZones(cleanupOriginalVZ);
-          modifiedEditor.changeViewZones(cleanupModifiedVZ);
-          cleanupPreviousViewzones = () => {};
-        };
-      } else {
-        setHiddenAreas(originalEditor, []);
-        setHiddenAreas(modifiedEditor, []);
-        cleanupPreviousViewzones();
-      }
-    }
-  }
-
-  function getFileUri(
-    file: File | null,
-    version: "new" | "old"
-  ): monaco.Uri | undefined {
-    if (!file) return undefined;
-
-    const res = monaco.Uri.file(file.path).with({
-      query: version,
-    });
-    return res;
-  }
-
-  function populateHunkContent(container: HTMLElement, hunk: Hunk) {
-    if (!$selectedDeltaKind$ || $selectedDeltaKind$ === "commit") {
-      return;
-    }
-
-    const button = document.createElement("button");
-    button.textContent = $selectedDeltaKind$ === "staged" ? "Unstage" : "Stage";
-    button.onclick = async () => {
-      const delta = $selectedDelta$;
-      const path = await firstValueFrom(repoPath$);
-      invoke($selectedDeltaKind$ === "staged" ? "unstage_hunk" : "stage_hunk", {
-        path,
-        delta,
-        hunk,
-      });
-    };
-    container.appendChild(button);
-  }
+      return {
+        ...result!,
+        new_file: highlight(result?.new_file, fileChanges[1]),
+        old_file: highlight(result?.old_file, fileChanges[0]),
+      };
+    })
+  );
 </script>
 
 <div class="diff-view">
@@ -213,7 +72,11 @@
     </ButtonGroup>
     <button on:click={() => setDiffDelta(null)}>Close</button>
   </div>
-  <div class="monaco-container" bind:this={container} />
+  <div class="monaco-container">
+    {#each $highlightedDelta$?.hunks ?? [] as hunk}
+      <DiffViewHunkContent highlightedDelta={$highlightedDelta$} {hunk} />
+    {/each}
+  </div>
 </div>
 
 <style>
@@ -229,6 +92,27 @@
 
   .monaco-container {
     flex: 1 1 auto;
+    overflow: auto;
+    max-width: 80vw;
+
+    /* From prism's theme */
+    color: #ccc;
+    background: #2d2d2d;
+    font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
+    font-size: 1em;
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    word-wrap: normal;
+    line-height: 1.5;
+    -moz-tab-size: 4;
+    -o-tab-size: 4;
+    tab-size: 4;
+    -webkit-hyphens: none;
+    -moz-hyphens: none;
+    -ms-hyphens: none;
+    hyphens: none;
   }
 
   :global(.view-zones) {
