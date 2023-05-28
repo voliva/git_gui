@@ -106,12 +106,5 @@
     font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
     font-size: 1rem;
     text-align: left;
-    white-space: pre;
-    word-spacing: normal;
-    word-break: normal;
-    word-wrap: normal;
-    line-height: 1.5;
-    tab-size: 2;
-    hyphens: none;
   }
 </style>

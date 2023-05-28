@@ -2,6 +2,7 @@
   import { type DeltaDiff, diffViewSettings$ } from "./diffViewState";
   import { getFileDiffLines, getHunkDiffLines } from "./diffLines";
   import DiffViewLines from "./DiffViewLines.svelte";
+  import DiffViewHunk from "./DiffViewHunk.svelte";
 
   export let highlightedDelta: DeltaDiff;
   $: hunk_or_file = $diffViewSettings$?.hunk_or_file;
@@ -21,9 +22,7 @@
 {/if}
 
 {#each hunks as hunk}
-  <div>
-    <div>{hunk.hunk.header}</div>
+  <DiffViewHunk hunk={hunk.hunk}>
     <DiffViewLines lines={hunk.lines} />
-    <hr />
-  </div>
+  </DiffViewHunk>
 {/each}

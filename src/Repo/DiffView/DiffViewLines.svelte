@@ -69,6 +69,15 @@
     display: flex;
     overflow: hidden;
     user-select: none;
+
+    /* From prism's theme */
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    word-wrap: normal;
+    line-height: 1.5;
+    tab-size: 2;
+    hyphens: none;
   }
   .line-nums > div {
     padding: 0 0.5rem;
