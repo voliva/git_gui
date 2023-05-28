@@ -29,6 +29,7 @@ export default defineConfig(async () => ({
         "jsx",
         "rust",
         "gherkin",
+        "diff",
         // Other popular, based on a post from analyticsinsight
         "python",
         "java",

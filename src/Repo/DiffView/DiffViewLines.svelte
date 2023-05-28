@@ -84,6 +84,7 @@
   }
   code > div {
     padding: 0 0.5rem;
+    width: fit-content;
   }
   .pad {
     background-image: linear-gradient(
@@ -97,11 +98,17 @@
       #0000 100%
     );
     background-size: 10px 10px;
+    box-sizing: border-box;
+    width: 100%;
+    position: sticky;
+    left: 0;
   }
   .added {
     background-color: #2a4025;
+    padding-right: 0;
   }
   .removed {
     background-color: #40252a;
+    padding-right: 0;
   }
 </style>

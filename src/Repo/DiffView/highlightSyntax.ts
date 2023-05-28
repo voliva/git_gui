@@ -28,6 +28,8 @@ const languageFromFileExtension: Record<string, string> = {
   feature: "gherkin",
   svelte: "svelte",
   json: "javascript",
+  diff: "diff",
+  patch: "diff",
   /// Popular
   py: "python",
   java: "java",

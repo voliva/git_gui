@@ -89,6 +89,7 @@
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
   .header {
@@ -98,25 +99,19 @@
   .diff-container {
     flex: 1 1 auto;
     overflow: auto;
-    max-width: 80vw;
 
     /* From prism's theme */
     color: #ccc;
     background: #2d2d2d;
     font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
-    font-size: 1em;
+    font-size: 1rem;
     text-align: left;
     white-space: pre;
     word-spacing: normal;
     word-break: normal;
     word-wrap: normal;
     line-height: 1.5;
-    -moz-tab-size: 4;
-    -o-tab-size: 4;
-    tab-size: 4;
-    -webkit-hyphens: none;
-    -moz-hyphens: none;
-    -ms-hyphens: none;
+    tab-size: 2;
     hyphens: none;
   }
 </style>
