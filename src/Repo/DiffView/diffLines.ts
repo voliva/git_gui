@@ -5,6 +5,7 @@ export interface Line {
   type: "add" | "remove" | "pad" | null;
   content: string | null;
   height?: number;
+  change?: Change;
 }
 
 export function getHunkDiffLines(
@@ -77,7 +78,6 @@ function getDiffUnifiedLines(
     side === Side.OldFile ? oldNum++ : newNum++;
   const getLines = (side: Side) =>
     side === Side.OldFile ? oldLines : newLines;
-  console.log({ oldLines, newLines });
 
   const lines: Line[] = [];
   const reversedChanges = [...changes].reverse();
@@ -89,6 +89,7 @@ function getDiffUnifiedLines(
         content: getLines(change.side)[change.line_num - 1],
         number: change.side === Side.NewFile ? [null, newNum] : [oldNum, null],
         type: change.change_type == "+" ? "add" : "remove",
+        change,
       });
       incrementNum(change.side);
       reversedChanges.pop();

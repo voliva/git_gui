@@ -1,9 +1,20 @@
 <script lang="ts">
-  import { Side } from "./diffViewState";
+  import { Side, selectedDelta$, selectedDeltaKind$ } from "./diffViewState";
   import type { Line } from "./diffLines";
+  import { invoke } from "@tauri-apps/api";
+  import { firstValueFrom } from "rxjs";
+  import { repoPath$ } from "../repoState";
 
   export let lines: Array<Line>;
   export let side: Side | null = null;
+  let hoveringLine: Line | null = null;
+
+  $: stagingType =
+    $selectedDeltaKind$ === "staged"
+      ? "staged"
+      : $selectedDeltaKind$ === "unstaged"
+      ? "unstaged"
+      : null;
 
   function getLineTypeSymbol(type: Line["type"]) {
     if (type == "add") {
@@ -14,9 +25,18 @@
     }
     return " ";
   }
+  async function toggleStage(line: Line) {
+    const delta = await firstValueFrom(selectedDelta$);
+    const path = await firstValueFrom(repoPath$);
+    invoke(stagingType === "staged" ? "unstage_line" : "stage_line", {
+      path,
+      delta,
+      change: line.change,
+    });
+  }
 </script>
 
-<div class="hunk-content">
+<div class="hunk-content" on:mouseleave={() => (hoveringLine = null)}>
   {#if side == null || side == Side.OldFile}
     <div class="line-nums">
       {#each lines as line}
@@ -24,6 +44,7 @@
           class:added={line.type === "add"}
           class:removed={line.type === "remove"}
           style:height={(line.height ?? 1) + "lh"}
+          on:mouseenter={() => (hoveringLine = line)}
         >
           {line.number[0] ?? " "}
         </div>
@@ -37,6 +58,7 @@
           class:added={line.type === "add"}
           class:removed={line.type === "remove"}
           style:height={(line.height ?? 1) + "lh"}
+          on:mouseenter={() => (hoveringLine = line)}
         >
           {line.number[1] ?? " "}
         </div>
@@ -49,8 +71,17 @@
         class:added={line.type === "add"}
         class:removed={line.type === "remove"}
         style:height={(line.height ?? 1) + "lh"}
+        on:mouseenter={() => (hoveringLine = line)}
       >
-        {getLineTypeSymbol(line.type)}
+        {#if stagingType && line == hoveringLine && (line.type === "add" || line.type === "remove")}
+          <input
+            type="checkbox"
+            checked={stagingType === "staged"}
+            on:click={() => toggleStage(line)}
+          />
+        {:else}
+          {getLineTypeSymbol(line.type)}
+        {/if}
       </div>
     {/each}
   </div>
@@ -59,7 +90,9 @@
           class:added={line.type === "add"}
           class:removed={line.type === "remove"}
           class:pad={line.type === "pad"}
-          style:height={(line.height ?? 1) + "lh"}>{@html line.content ||
+          style:height={(line.height ?? 1) + "lh"}
+          on:mouseenter={() => (hoveringLine = line)}
+          on:mouseleave={() => (hoveringLine = null)}>{@html line.content ||
             (line.type === "pad" ? "" : " ")}</div>{/each}</code
     ></pre>
 </div>
@@ -79,11 +112,21 @@
     tab-size: 2;
     hyphens: none;
   }
+  .line-nums {
+    flex: 0 0 auto;
+  }
   .line-nums > div {
     padding: 0 0.5rem;
   }
   .change {
+    flex: 0 0 auto;
     border-right: thin solid;
+    width: 1.5rem; /* To accomodate the stage/unstage button */
+    text-align: center;
+  }
+  .change input {
+    margin: 0;
+    vertical-align: middle;
   }
   pre {
     flex: 1 1 auto;
