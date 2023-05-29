@@ -39,9 +39,9 @@ impl<'a> From<DiffHunk<'a>> for Hunk {
 
 #[derive(Serialize, Deserialize)]
 pub struct Change {
-    side: Side,
-    line_num: u32,
-    change_type: char,
+    pub side: Side,
+    pub line_num: u32,
+    pub change_type: char,
 }
 
 impl<'a> TryFrom<DiffLine<'a>> for Change {

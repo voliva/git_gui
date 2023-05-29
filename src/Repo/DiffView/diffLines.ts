@@ -2,6 +2,7 @@ import { Side, type Change, type DeltaDiff, type Hunk } from "./diffViewState";
 
 export interface Line {
   number: [number | null, number | null];
+  reference_number: [number, number];
   type: "add" | "remove" | "pad" | null;
   content: string | null;
   height?: number;
@@ -88,6 +89,7 @@ function getDiffUnifiedLines(
       lines.push({
         content: getLines(change.side)[change.line_num - 1],
         number: change.side === Side.NewFile ? [null, newNum] : [oldNum, null],
+        reference_number: [oldNum, newNum],
         type: change.change_type == "+" ? "add" : "remove",
         change,
       });
@@ -98,6 +100,7 @@ function getDiffUnifiedLines(
       lines.push({
         content: newLines[newNum - 1],
         number: [oldNum, newNum],
+        reference_number: [oldNum, newNum],
         type: null,
       });
       newNum++;
@@ -158,7 +161,6 @@ function getDiffSideLines(
     const [oldChanges, newChanges] = getContiguousChanges();
     const totalChanges = oldChanges.length + newChanges.length;
     if (totalChanges) {
-      console.log(oldChanges, newChanges);
       const sideChanges = side === Side.OldFile ? oldChanges : newChanges;
       const padding =
         Math.max(oldChanges.length, newChanges.length) - sideChanges.length;
@@ -166,6 +168,7 @@ function getDiffSideLines(
         lines.push({
           content: getLines(change.side)[change.line_num - 1],
           number: [change.line_num, change.line_num], // A bit of a hack, we will only show the relevant value
+          reference_number: [change.line_num, change.line_num],
           type: change.change_type == "+" ? "add" : "remove",
         });
       });
@@ -173,6 +176,7 @@ function getDiffSideLines(
         lines.push({
           content: null,
           number: [null, null],
+          reference_number: [oldNum, newNum],
           type: "pad",
           height: padding,
         });
@@ -185,6 +189,7 @@ function getDiffSideLines(
       lines.push({
         content: newLines[newNum - 1],
         number: [oldNum, newNum],
+        reference_number: [oldNum, newNum],
         type: null,
       });
       newNum++;

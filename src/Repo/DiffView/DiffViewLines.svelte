@@ -32,6 +32,7 @@
       path,
       delta,
       change: line.change,
+      position: line.reference_number[0],
     });
   }
 </script>

@@ -1,14 +1,19 @@
-use std::path::{Path, PathBuf};
+use std::{
+    fs::File,
+    io::BufRead,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use super::{
     get_file_blob,
     serializer::delta::{Delta, FileChange},
-    Hunk,
+    Change, Hunk,
 };
 use git2::{DiffOptions, ErrorCode, Index, IndexAddOption, Repository};
 use itertools::Itertools;
 use logging_timer::time;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 #[derive(Serialize)]
 pub enum StageError {
@@ -268,52 +273,69 @@ fn revert_origin(origin: char) -> char {
     }
 }
 
-#[derive(Deserialize)]
-pub enum LineChange {
-    Add { after: usize, content: String },
-    Remove(usize),
-}
-
+/**
+ * position is the line number we need to put the change on, which is important in the case of '+':
+ * change.line_number has the line number of the workdir file to get the content from
+ * but that is not where the line should go to when brought to the staging area.
+ */
 #[time]
 #[tauri::command(async)]
-pub fn stage_line(path: String, delta: Delta, change: LineChange) -> Result<(), StageError> {
+pub fn stage_line(
+    path: String,
+    delta: Delta,
+    change: Change,
+    position: usize,
+) -> Result<(), StageError> {
     let repo = Repository::open(path.clone())?;
-    let target_idx = match change {
-        LineChange::Add { after, content: _ } => after,
-        LineChange::Remove(line) => line - 1,
-    };
 
     let file = delta.change.get_oldest_file();
     let blob = get_file_blob(&repo, &path, file)
         .ok_or(StageError::Read("Couldn't read file blob".to_owned()))?;
 
-    let data = blob
-        .content()
-        .split(|v| *v == '\n' as u8)
-        .enumerate()
-        .flat_map(|(line_idx, line)| {
-            if line_idx == target_idx {
-                return match &change {
-                    LineChange::Add { after: _, content } => vec![content
+    let target_idx = position - 1;
+    let data = if change.change_type == '+' {
+        let filename = PathBuf::from_str(path.as_str())
+            .unwrap()
+            .join(file.path.clone());
+        let content = std::io::BufReader::new(File::open(filename).unwrap())
+            .lines()
+            .take(change.line_num as usize)
+            .last()
+            .unwrap()
+            .unwrap();
+
+        blob.content()
+            .split(|v| *v == '\n' as u8)
+            .enumerate()
+            .flat_map(|(line_idx, line)| {
+                if line_idx == target_idx {
+                    vec![content
                         .as_bytes()
                         .iter()
+                        .chain("\n".as_bytes())
                         .chain(line.iter())
                         .map(|v| *v)
-                        .collect_vec()],
-                    LineChange::Remove(_) => vec![],
-                };
-            }
-            return vec![line.into()];
-        })
-        .collect_vec()
-        .join(&['\n' as u8] as &[u8]);
-
-    // Should be the same format as
-    // let diff = repo.diff_index_to_workdir(None, None)?;
-    // diff.print(git2::DiffFormat::Patch, |_, _, line| {
-    //     print!("{}", std::str::from_utf8(line.content())?);
-    //     true
-    // });
+                        .collect_vec()]
+                } else {
+                    vec![line.into()]
+                }
+            })
+            .collect_vec()
+            .join(&['\n' as u8] as &[u8])
+    } else {
+        blob.content()
+            .split(|v| *v == '\n' as u8)
+            .enumerate()
+            .flat_map(|(line_idx, line)| {
+                if line_idx == target_idx {
+                    vec![]
+                } else {
+                    vec![line]
+                }
+            })
+            .collect_vec()
+            .join(&['\n' as u8] as &[u8])
+    };
 
     let mut index = repo.index()?;
     let entry = index
