@@ -1,14 +1,18 @@
 <script lang="ts">
   import { boxFill } from "@/quickStyles.css";
-  import { commits$, type PositionedCommit } from "../repoState";
-  import VirtualScroll from "svelte-virtual-scroll-list";
   import classNames from "classnames";
-  import { getInitialWidth, getMaxWidth, getMinWidth } from "./graphColumn";
-  import GraphCell from "./GraphCell.svelte";
-  import CommitCell from "./CommitCell.svelte";
+  import { onDestroy, onMount } from "svelte";
+  import VirtualScroll from "svelte-virtual-scroll-list";
+  import { get } from "svelte/store";
+  import { commits$, type PositionedCommit } from "../repoState";
   import { activeCommit$, setActiveCommit } from "./activeCommit";
+  import CommitCell from "./CommitCell.svelte";
   import { repoGridRow } from "./commitRefs.css";
+  import GraphCell from "./GraphCell.svelte";
+  import { getInitialWidth, getMaxWidth, getMinWidth } from "./graphColumn";
   import { ITEM_HEIGHT } from "./gridConstants";
+  import { initialScrollIdx$, scrollStore } from "./repoGridScroll";
+  import { componentEffect } from "@/lib/rxState";
 
   const RESIZER_WIDTH = 7;
   const activeCommitBgColor = "#222244";
@@ -17,9 +21,26 @@
   let canvasWidth = getInitialWidth();
   let hoveringRow: string | null = null;
   let gridHeight: number | null = null;
+  let virtualScroll: VirtualScroll;
 
   $: graphColumnWidth = canvasWidth + RESIZER_WIDTH;
   $: keeps = gridHeight ? Math.ceil((1.4 * gridHeight) / ITEM_HEIGHT) : 30;
+
+  onMount(() => {
+    const scrollValue = get(scrollStore);
+    if (scrollValue) {
+      virtualScroll.scrollToOffset(scrollValue);
+    }
+  });
+
+  componentEffect(
+    initialScrollIdx$.subscribe((idx) => {
+      if (get(scrollStore)) {
+        return;
+      }
+      virtualScroll.scrollToIndex(Math.max(0, idx - 3));
+    })
+  );
 
   const onGraphResizerMouseDown = (evt: MouseEvent) => {
     const initialWidth = graphColumnWidth;
@@ -73,6 +94,8 @@
       key="id"
       estimateSize={ITEM_HEIGHT}
       {keeps}
+      bind:this={virtualScroll}
+      on:scroll={() => scrollStore.set(virtualScroll.getOffset())}
       let:data
     >
       <div

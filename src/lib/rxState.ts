@@ -1,4 +1,5 @@
 import { Observable, Subscription, type ObservableInput, from } from "rxjs";
+import { onDestroy } from "svelte";
 
 export const isNullish = <T>(v: T | null | undefined): v is null | undefined =>
   v == null;
@@ -94,4 +95,8 @@ export function losslessThrottle<T>(timeout: number) {
         }
       };
     });
+}
+
+export function componentEffect(subscription: Subscription) {
+  onDestroy(() => subscription.unsubscribe());
 }

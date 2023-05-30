@@ -15,6 +15,10 @@ export const horizontalFlex = style({
   display: "flex",
 });
 
+export const flexGap = style({
+  gap: "0.3rem",
+});
+
 export const centeredFlex = style({
   alignItems: "center",
 });
