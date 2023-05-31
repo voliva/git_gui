@@ -179,6 +179,8 @@ selectedDelta$
         getFileChangeFiles(delta.change)[0] ??
         getFileChangeFiles(delta.change)[1]
       )?.path,
+    }).then((res) => {
+      console.log("history", res);
     });
   });
 

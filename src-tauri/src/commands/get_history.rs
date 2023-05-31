@@ -4,6 +4,8 @@ use std::{collections::HashSet, path::Path};
 use git2::{Oid, Repository};
 use logging_timer::time;
 
+use crate::positioned_commit::CommitInfo;
+
 use super::serializer::git_error::GitError;
 
 #[time]
@@ -12,24 +14,24 @@ pub fn get_history(
     path: String,
     file_path: String,
     commit_id: Option<String>,
-) -> Result<(), GitError> {
+) -> Result<Vec<CommitInfo>, GitError> {
     let repo = Repository::open(path)?;
 
-    // let res = get_history_walker(
-    //     &repo,
-    //     &Path::new(&file_path),
-    //     commit_id.map(|id| Oid::from_str(&id).unwrap()),
-    // )?;
-    let res = HistoryIterator::new(
+    let history = HistoryIterator::new(
         &repo,
         file_path,
         commit_id.map(|id| Oid::from_str(&id).unwrap()),
     )?;
-    res.for_each(|id| {
-        println!("history {:?}", id);
-    });
 
-    Ok(())
+    let commits = history
+        .map(|oid| {
+            let commit = repo.find_commit(oid).unwrap();
+
+            CommitInfo::new(&commit)
+        })
+        .collect();
+
+    Ok(commits)
 }
 
 #[derive(Hash, PartialEq, Eq)]
@@ -42,7 +44,6 @@ struct HistoryIterator<'a> {
     repo: &'a Repository,
     heads: PriorityQueue<HistoryIteratorHead, i64>,
     visited: HashSet<Oid>,
-    returned: usize,
 }
 
 impl<'a> HistoryIterator<'a> {
@@ -59,7 +60,6 @@ impl<'a> HistoryIterator<'a> {
             repo,
             heads,
             visited: HashSet::new(),
-            returned: 0,
         })
     }
 }
@@ -111,12 +111,9 @@ impl Iterator for HistoryIterator<'_> {
             }
 
             if parent_entry.is_err() || parent_entry.unwrap().id() != entry.id() {
-                self.returned += 1;
                 return Some(head.oid);
             }
         }
-
-        println!("Stats: {}/{}", self.returned, self.visited.len());
 
         None
     }
