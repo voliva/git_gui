@@ -1,13 +1,10 @@
-use std::{
-    collections::HashSet,
-    iter::{Filter, FilterMap},
-    path::Path,
-};
+use priority_queue::PriorityQueue;
+use std::{collections::HashSet, path::Path};
 
-use git2::{Oid, Repository, Revwalk, Sort};
+use git2::{Oid, Repository};
 use logging_timer::time;
 
-use super::{commit, serializer::git_error::GitError};
+use super::serializer::git_error::GitError;
 
 #[time]
 #[tauri::command(async)]
@@ -35,55 +32,7 @@ pub fn get_history(
     Ok(())
 }
 
-pub fn get_history_walker<'a>(
-    repo: &'a Repository,
-    path: &'a Path,
-    commit_id: Option<Oid>,
-) -> Result<
-    Filter<
-        FilterMap<Revwalk<'a>, impl FnMut(Result<Oid, git2::Error>) -> Option<Oid> + 'a>,
-        impl FnMut(&Oid) -> bool + 'a,
-    >,
-    GitError,
-> {
-    let mut walker = repo.revwalk()?;
-    walker.set_sorting(Sort::TOPOLOGICAL.union(Sort::TIME))?;
-
-    if let Some(id) = commit_id {
-        walker.push(id)?;
-    } else {
-        walker.push_head()?;
-    }
-
-    // This would be better but WalkerWithHideCallback is not exported :(
-    // let walker = walker.with_hide_callback(&|id| {
-    //     let commit = repo.find_commit(id).unwrap();
-    //     let tree = commit.tree().unwrap();
-    //     tree.get_path(path).is_err()
-    // })?;
-    // TODO try with impl Repository { some filter function } then use with_hide_callback outside?
-
-    let filtered = walker.filter_map(|result| result.ok()).filter(move |id| {
-        let commit = repo.find_commit(*id).unwrap();
-        let tree = commit.tree().unwrap();
-
-        let entry = tree.get_path(path);
-
-        if let Err(_) = entry {
-            println!("Err entry");
-            return true;
-        }
-        if let Ok(entry) = entry {
-            println!("found {:?} {:?}", &path, entry.id())
-        }
-        return true;
-
-        tree.get_path(path).is_err()
-    });
-
-    Ok(filtered)
-}
-
+#[derive(Hash, PartialEq, Eq)]
 struct HistoryIteratorHead {
     path: String,
     oid: Oid,
@@ -91,7 +40,7 @@ struct HistoryIteratorHead {
 
 struct HistoryIterator<'a> {
     repo: &'a Repository,
-    heads: Vec<HistoryIteratorHead>,
+    heads: PriorityQueue<HistoryIteratorHead, i64>,
     visited: HashSet<Oid>,
     returned: usize,
 }
@@ -103,23 +52,15 @@ impl<'a> HistoryIterator<'a> {
         commit_id: Option<Oid>,
     ) -> Result<HistoryIterator<'a>, git2::Error> {
         let oid = commit_id.unwrap_or_else(|| repo.head().unwrap().peel_to_commit().unwrap().id());
+        let mut heads = PriorityQueue::new();
+        heads.push(HistoryIteratorHead { path, oid }, 0);
 
         Ok(HistoryIterator {
             repo,
-            heads: vec![HistoryIteratorHead { path, oid }],
+            heads,
             visited: HashSet::new(),
             returned: 0,
         })
-    }
-}
-
-fn pop_set<T: std::cmp::Eq + std::hash::Hash + Clone>(set: &mut HashSet<T>) -> Option<T> {
-    let next = set.iter().next();
-    if let Some(v) = next {
-        let v = v.clone();
-        set.take(&v)
-    } else {
-        None
     }
 }
 
@@ -127,7 +68,7 @@ impl Iterator for HistoryIterator<'_> {
     type Item = Oid;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(head) = self.heads.pop() {
+        while let Some((head, _)) = self.heads.pop() {
             if self.visited.contains(&head.oid) {
                 continue;
             }
@@ -137,10 +78,13 @@ impl Iterator for HistoryIterator<'_> {
 
             if commit.parent_count() != 1 {
                 commit.parent_ids().for_each(|oid| {
-                    self.heads.push(HistoryIteratorHead {
-                        path: head.path.clone(),
-                        oid,
-                    });
+                    self.heads.push(
+                        HistoryIteratorHead {
+                            path: head.path.clone(),
+                            oid,
+                        },
+                        commit.time().seconds(),
+                    );
                 });
                 continue;
             }
@@ -157,10 +101,13 @@ impl Iterator for HistoryIterator<'_> {
             let parent_entry = parent_commit.tree().unwrap().get_path(&path);
 
             if !parent_entry.is_err() {
-                self.heads.push(HistoryIteratorHead {
-                    path: head.path.clone(),
-                    oid: parent_commit.id(),
-                });
+                self.heads.push(
+                    HistoryIteratorHead {
+                        path: head.path.clone(),
+                        oid: parent_commit.id(),
+                    },
+                    parent_commit.time().seconds(),
+                );
             }
 
             if parent_entry.is_err() || parent_entry.unwrap().id() != entry.id() {
