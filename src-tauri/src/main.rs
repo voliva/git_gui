@@ -10,7 +10,7 @@ mod settings;
 
 use crate::commands::{
     checkout_commit, checkout_local, checkout_remote, commit, fetch, get_commit, get_commits,
-    get_diff, get_diff_settings, get_last_repo, get_refs, get_working_dir, open_repo,
+    get_diff, get_diff_settings, get_history, get_last_repo, get_refs, get_working_dir, open_repo,
     set_diff_settings, stage, stage_hunk, stage_line, stop_watch_repo, unstage, unstage_hunk,
     watch_repo,
 };
@@ -42,6 +42,7 @@ fn main() {
             get_commit,
             get_commits,
             get_diff,
+            get_history,
             get_last_repo,
             get_port,
             get_refs,

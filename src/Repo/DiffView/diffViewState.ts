@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api";
 import {
   Observable,
   distinctUntilChanged,
+  filter,
   from,
   map,
   of,
@@ -23,6 +24,8 @@ import {
 import type { WorkingDirStatus } from "../DetailPanel/workingDirectoryState";
 import { workingDirectory$ } from "../DetailPanel/workingDirectoryState";
 import { repoPath$ } from "../repoState";
+import { isNotNullish } from "@/lib/rxState";
+import { activeCommit$ } from "../RepoGrid/activeCommit";
 
 export enum Side {
   OldFile = "OldFile",
@@ -165,6 +168,19 @@ export const selectedDeltaKind$ = selectedDeltaWithKind$.pipeState(
   map((v) => v?.kind ?? null),
   withDefault(null)
 );
+
+selectedDelta$
+  .pipe(filter(isNotNullish), withLatestFrom(repoPath$, activeCommit$))
+  .subscribe(([delta, repoPath, commit]) => {
+    console.log("invoke", delta, repoPath, commit);
+    invoke("get_history", {
+      path: repoPath,
+      filePath: (
+        getFileChangeFiles(delta.change)[0] ??
+        getFileChangeFiles(delta.change)[1]
+      )?.path,
+    });
+  });
 
 export const diffDelta$ = selectedDelta$.pipeState(
   withLatestFrom(repoPath$),
