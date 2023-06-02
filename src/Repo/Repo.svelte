@@ -9,6 +9,8 @@
   import RepoHeader from "./RepoHeader.svelte";
   import { commits$ } from "./repoState";
   import ImageDiffView from "./DiffView/ImageDiffView.svelte";
+  import { viewHistory$ } from "./History/historyState";
+  import History from "./History/History.svelte";
 
   let sub: Subscription;
   onMount(() => {
@@ -22,14 +24,18 @@
 <div class={qs("verticalFlex", "noOverflow")} style="height: 100%">
   <RepoHeader />
 
-  <div class={qs("boxFill", "horizontalFlex", "noOverflow")}>
-    {#if $selectedDelta$?.mime_type?.startsWith("image")}
-      <ImageDiffView />
-    {:else if $selectedDelta$}
-      <DiffView />
-    {:else}
-      <RepoGrid />
-    {/if}
-    <DetailPanel />
-  </div>
+  {#if $viewHistory$}
+    <History />
+  {:else}
+    <div class={qs("boxFill", "horizontalFlex", "noOverflow")}>
+      {#if $selectedDelta$?.mime_type?.startsWith("image")}
+        <ImageDiffView />
+      {:else if $selectedDelta$}
+        <DiffView />
+      {:else}
+        <RepoGrid />
+      {/if}
+      <DetailPanel />
+    </div>
+  {/if}
 </div>

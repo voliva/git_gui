@@ -77,7 +77,6 @@ function getDiffUnifiedLines(
     side === Side.OldFile ? oldNum++ : newNum++;
   const getLines = (side: Side) =>
     side === Side.OldFile ? oldLines : newLines;
-  console.log({ oldLines, newLines });
 
   const lines: Line[] = [];
   const reversedChanges = [...changes].reverse();

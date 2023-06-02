@@ -1,6 +1,6 @@
 import { state, withDefault } from "@react-rxjs/core";
 import { createSignal } from "@react-rxjs/utils";
-import { Observable, concat, map, switchMap, withLatestFrom } from "rxjs";
+import { Observable, concat, switchMap, withLatestFrom } from "rxjs";
 import { repoPath$, type CommitInfo } from "../repoState";
 import { invoke } from "@tauri-apps/api";
 
@@ -39,10 +39,10 @@ export const viewHistory$ = state(
 
 export const [selectedCommitChange$, selectCommit] = createSignal<string>();
 export const selectedCommit$ = viewHistory$.pipeState(
-  map((viewHistory) =>
+  switchMap((viewHistory) =>
     viewHistory?.result?.length
       ? concat([viewHistory.result[0].id], selectedCommitChange$)
-      : null
+      : [null]
   ),
   withDefault(null)
 );

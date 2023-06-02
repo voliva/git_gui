@@ -18,6 +18,8 @@
   import { highlightSyntax } from "./highlightSyntax";
   import DiffViewUnified from "./DiffViewUnified.svelte";
   import DiffViewSplit from "./DiffViewSplit.svelte";
+  import { viewHistory } from "../History/historyState";
+  import { activeCommit$ } from "../RepoGrid/activeCommit";
 
   const highlightedDelta$ = diffDelta$.pipeState(
     filter((delta) => !!delta),
@@ -39,6 +41,8 @@
       };
     })
   );
+
+  $: files = getFileChangeFiles($selectedDelta$!.change);
 </script>
 
 <div class="diff-view">
@@ -71,6 +75,13 @@
         on:click={() => changeHunkOrFile("Hunk")}>Hunk</button
       >
     </ButtonGroup>
+    <button
+      on:click={() =>
+        viewHistory({
+          filePath: files[1]?.path ?? files[0]?.path ?? "",
+          commitId: $activeCommit$ ?? undefined,
+        })}>History</button
+    >
     <button on:click={() => setDiffDelta(null)}>Close</button>
   </div>
   <div class="diff-container">
